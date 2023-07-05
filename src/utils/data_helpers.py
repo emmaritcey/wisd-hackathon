@@ -107,32 +107,36 @@ def get_event(pbp_event, event_type, events_df, tracking_df):
     return event, tr_event
 
 
-def get_data_liveTO(event_pbp_df, tracking_df, team):
+def get_data_liveTO(pbp_df, events_df, tracking_df, team):
     '''
     get the event data and tracking data for all live turnovers in a game for one team
     INPUT:
-        - event_pbp_df, DF: all event data from the game merged with the play-by-play data
+        - pbp_df, DF: play-by-play data from the game 
+        - events_df, DF: all event data from the game
         - tracking_df, DF: all tracking data from the game
         - team, str: 'home' to get home team's fgm or 'away' to get visiting team's fgm
     RETURN:
-        - live_TO_event: event data (and pbp data) containing all live ball turnovers for one team
+        - live_TO_events: event data containing all live ball turnovers for one team
         - live_TO_tr: tracking data at the exact moment each turnover occurred for one team
     '''
-    live_TO_all = event_pbp_df[(event_pbp_df['EVENTMSGTYPE']==5) & ((event_pbp_df['EVENTMSGACTIONTYPE']==1) | (event_pbp_df['EVENTMSGACTIONTYPE']==2))]
+    live_TO_all = pbp_df[(pbp_df['EVENTMSGTYPE']==5) & ((pbp_df['EVENTMSGACTIONTYPE']==1) | (pbp_df['EVENTMSGACTIONTYPE']==2))]
     if team == 'home':
         description1 = 'HOMEDESCRIPTION'
     else:
         description1 = 'VISITORDESCRIPTION'
-    live_TO_event = live_TO_all[live_TO_all[description1].str.contains('Turnover')==True]
-    live_TO_tr = tracking_df[tracking_df['wallClock'].isin(live_TO_event['wallClock'].values)]
-    return live_TO_event, live_TO_tr
+    live_TO = live_TO_all[live_TO_all[description1].str.contains('Turnover')==True
+                        ]
+    live_TO_events = events_df[events_df['pbpId'].isin(live_TO['EVENTNUM'].values)]
+    live_TO_tr = tracking_df[tracking_df['wallClock'].isin(live_TO_events['wallClock'].values)]
+    return live_TO_events, live_TO_tr, live_TO
 
 
-def get_data_FGM(event_pbp_df, tracking_df, team):
+def get_data_FGM(pbp_df, events_df, tracking_df, team):
     '''
     get the event data and tracking data for all made field goals in a game for one team
     INPUT:
-        - event_pbp_df, DF: all event data from the game merged with the play-by-play data
+        - pbp_df, DF: play-by-play data of the game
+        - events_df, DF: all event data from the game
         - tracking_df, DF: all tracking data from the game
         - team, str: 'home' to get home team's fgm or 'away' to get visiting team's fgm
     RETURN:
@@ -140,22 +144,24 @@ def get_data_FGM(event_pbp_df, tracking_df, team):
         - fgm_tr, df: tracking data at the exact moment each field goal was made for one team
     '''   
     
-    fgm_df = event_pbp_df[event_pbp_df['EVENTMSGTYPE']==1]
+    fgm_df = pbp_df[pbp_df['EVENTMSGTYPE']==1]
     if team == 'home':
         description1 = 'HOMEDESCRIPTION'
     else:
         description1 = 'VISITORDESCRIPTION'
     fgm_df = fgm_df[fgm_df[description1].notnull()] #if home team took shot, HOMEDESCRIPTION contains description, if visitor team took shot then its null
-    fgm_events = fgm_df[fgm_df['eventType']=='SHOT']#sometimes the pass into the shot is given same pbpId, so specifially search for event of interest
+    play_id = fgm_df['EVENTNUM'].values
+    fgm_events = events_df[(events_df['pbpId'].isin(play_id)) & (events_df['eventType']=='SHOT')] #sometimes the pass into the shot is given same pbpId, so specifially search for event of interest
     fgm_tr = tracking_df[tracking_df['wallClock'].isin(fgm_events['wallClock'].values)]
-    return fgm_events, fgm_tr
+    return fgm_events, fgm_tr, fgm_df
 
 
-def get_data_DREB(event_pbp_df, tracking_df, team):
+def get_data_DREB(pbp_df, events_df, tracking_df, team):
     '''
     get the event data and tracking data for all defensive rebounds for one team in a game
     INPUT:
-        - event_pbp_df, DF: all event data from the game merged with the play-by-play data
+        - pbp_df, df: all play-by-play data of the game
+        - events_df, df: all event data from the game
         - tracking_df, df: all tracking data from the game
         - team, str: 'home' to get home team's defensive rebounds or 'away' to get visiting team's defensive rebounds
     RETURN:
@@ -163,7 +169,7 @@ def get_data_DREB(event_pbp_df, tracking_df, team):
         - reb_def_tr: tracking data at the exact moment each defensive rebound was obtained for one team
     '''
     #get play by play data of all missed FGA
-    missed_fg_df = event_pbp_df[event_pbp_df['EVENTMSGTYPE'] == 2]
+    missed_fg_df = pbp_df[pbp_df['EVENTMSGTYPE'] == 2]
     
     #get either all of the home team's missed FGA or all of the away team's missed FGA
     if team == 'home':
@@ -173,13 +179,14 @@ def get_data_DREB(event_pbp_df, tracking_df, team):
     missed_fg_df = missed_fg_df[missed_fg_df[description1].str.contains('MISS')==True]
     
     #find defensive rebounds from team's missed shots
-    reb_all = event_pbp_df.iloc[missed_fg_df.index + 1] #all rebounds off team's missed FGs
+    reb_all = pbp_df.iloc[missed_fg_df.index + 1] #all rebounds off team's missed FGs
     if team == 'home':
         description2 = 'HOMEDESCRIPTION'
     else:
         description2 = 'VISITORDESCRIPTION'
     reb_def = reb_all[reb_all[description2].str.contains('REBOUND')==True]
     
-    reb_def_tr = tracking_df[tracking_df['wallClock'].isin(reb_def['wallClock'].values)]
+    reb_def_events = events_df[events_df['pbpId'].isin(reb_def['EVENTNUM'].values)]
+    reb_def_tr = tracking_df[tracking_df['wallClock'].isin(reb_def_events['wallClock'].values)]
     
-    return reb_def, reb_def_tr
+    return reb_def_events, reb_def_tr, reb_def
