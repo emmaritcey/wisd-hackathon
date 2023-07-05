@@ -1,0 +1,33 @@
+All data for the WiSD hackathon is located in this AWS S3 bucket: sportradar-wisd-data.
+
+The metadata for the games, players, and teams are located in the 'metadata' folder as JSON files, providing detailed information about each game, team, or player. The tracking and events data can be found in the 'games/<game_id>' folders as JSONL files, where each line represents a valid JSON object.
+
+You can choose to either use the AWS command line interface (https://github.com/aws/aws-cli) to download the data locally, or utilize the AWS SDK to download data within your application code. Here's a list of popular SDKs:
+- Python: Boto3 (https://github.com/boto/boto3)
+- Java: AWS SDK for Java (https://github.com/aws/aws-sdk-java)
+- JavaScript: AWS SDK for JavaScript (https://github.com/aws/aws-sdk-js-v3)
+
+The easiest way to export your AWS credentials is to set them as your local environment variables:
+export AWS_ACCESS_KEY_ID=<access_key>
+export AWS_SECRET_ACCESS_KEY=<secret_key>
+
+
+Here's a list of 18 game IDs for the 2021-22 Western/Eastern Conference Finals and NBA Finals:
+0042100301
+0042100302
+0042100303
+0042100304
+0042100305
+0042100306
+0042100307
+0042100311
+0042100312
+0042100313
+0042100314
+0042100315
+0042100401
+0042100402
+0042100403
+0042100404
+0042100405
+0042100406

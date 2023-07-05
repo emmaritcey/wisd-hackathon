@@ -1,1 +1,3 @@
-Fill in later
+Setup:
+>>> pip install -r requirements.txt
+
