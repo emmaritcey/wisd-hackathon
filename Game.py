@@ -6,6 +6,10 @@ import json
 class Game:
     def __init__(self, game_id):
         self.id = game_id
+        self.pbp_df = self.get_playbyplay()
+        self.events_df = self.get_events()
+        self.tracking_df = self.get_tracking()
+        self.event_pbp_df = self.merge_events_with_pbp()
         
         
     def get_playbyplay(self):
@@ -23,8 +27,8 @@ class Game:
         return tracking_df
         
     def merge_events_with_pbp(self):
-        pbp_df = self.get_playbyplay()
-        events_df = self.get_events()
+        pbp_df = self.pbp_df
+        events_df = self.events_df
         event_pbp_df = events_df.merge(pbp_df, left_on="pbpId", right_on="EVENTNUM", how="left")
         return event_pbp_df
     
