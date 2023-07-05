@@ -40,5 +40,5 @@ class Game:
     
         game_md['awayTeamName'] = get_team_name(game_md['awayTeamId'])
         game_md['homeTeamName'] = get_team_name(game_md['homeTeamId'])
-        
+        #TEST
         return game_md
