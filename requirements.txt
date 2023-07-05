@@ -2,3 +2,7 @@ awscli
 boto3
 python-dotenv
 jsonlines
+matplotlib
+numpy
+pandas
+nba-api
