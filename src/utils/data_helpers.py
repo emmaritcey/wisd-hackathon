@@ -2,6 +2,7 @@
 import os
 import json
 from nba_api.stats.static import teams
+import numpy as np
 
 METADATA_PATH = './data/metadata'
 
@@ -183,3 +184,64 @@ def get_data_DREB(event_pbp_df, tracking_df, team):
     reb_def_tr = tracking_df[tracking_df['wallClock'].isin(reb_def['wallClock'].values)]
     
     return reb_def, reb_def_tr
+
+
+def classify_possession(trans_possession):
+    '''
+    Determine whether a (transition) opportunity ended with a shot, turnover, stoppage, or no shot
+        - shot = shot taken within snapshot (8 seconds)
+        - stoppage = out of bounds, violation, etc
+        - turnover = turnover before shot was taken
+        - no shot = no shot, stoppage, or turnover within the snapshot (8 seconds)
+    INPUT:
+        - trans_possesion, df: dataframe containing 200 frames (about 8 seconds) of event and tracking data for a single transition opportunity
+    OUTPUT:
+        - possession class, str: 'shot', 'stoppage', 'turnover', 'no shot'
+    '''
+    stoppage = False
+    stoppage_idx = -10
+    tover = False
+    tover_idx = -10
+    shot = False
+    shot_idx = -10
+    
+    possession_class = None
+    
+    #if clock stopped during this possession, find the index of where it stopped
+    if True in trans_possession['gameClockStopped'].values:
+        stoppage_idx = np.where(trans_possession['gameClockStopped'].values == True)[0][0]
+        
+    trans_events = trans_possession['eventType'].values[1:]
+    idx = 0
+    for event in trans_events:
+        idx += 1
+        try:
+            if np.isnan(event):
+                continue 
+        except:
+            if event == 'SHOT':
+                if stoppage == False and tover == False: #if gameclock hasn't stopped up until this point and no turnover occurred prior to this (this could be other teams shot)
+                    possession_class = 'shot'
+                    break
+                elif stoppage == True and tover == False: #if gameclock stopped before shot and no TO occurred (shot didn't come in transition)
+                    possession_class = 'stoppage'
+                    break
+                elif stoppage == False and tover == True: #if TO occurred prior to shot and no stoppage has occurred
+                    possession_class = 'turnover'
+                elif stoppage == True and tover == True: #if TO occurred and game clock stopped prior to shot
+                    if stoppage_idx < tover_idx: #stoppage occurred first
+                        possession_class = 'stoppage'
+                    if tover_idx < stoppage_idx: #turnover occurred first
+                        possession_class = 'turnover'
+                break
+            elif event == 'TO':
+                tover == True
+                tover_idx = idx
+    
+    if possession_class == None: #no shot occurred, no turnover occurred
+        if stoppage == True: #clock stopped at some point
+            possession_class = 'stoppage'
+        else: #clock never stopped
+            possession_class = 'no shot'
+
+    return possession_class
