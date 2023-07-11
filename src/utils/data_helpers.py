@@ -185,7 +185,9 @@ def get_data_DREB(event_pbp_df, tracking_df, team):
     
     return reb_def, reb_def_tr
 
-
+#TODO: CHECK FOR FOUL CAUSING STOPPAGE (CREATE NEW CLASS FOR FOUL)
+    # fould occurs one index before clock stopped
+#TODO: IF TURNOVER OCCURS ONE INDEX BEFORE STOPPAGE, THEN CLASS SHOULD BE TO
 def classify_possession(trans_possession):
     '''
     Determine whether a (transition) opportunity ended with a shot, turnover, stoppage, or no shot
@@ -204,44 +206,45 @@ def classify_possession(trans_possession):
     tover_idx = -10
     shot = False
     shot_idx = -10
+    foul = False
+    foul_idx = -10
     
     possession_class = None
+    
+    events_idx_dict = {}
     
     #if clock stopped during this possession, find the index of where it stopped
     if True in trans_possession['gameClockStopped'].values:
         stoppage_idx = np.where(trans_possession['gameClockStopped'].values == True)[0][0]
+        stoppage = True
+        events_idx_dict['stoppage'] = stoppage_idx
         
     trans_events = trans_possession['eventType'].values[1:]
-    idx = 0
-    for event in trans_events:
-        idx += 1
-        try:
-            if np.isnan(event):
-                continue 
-        except:
-            if event == 'SHOT':
-                if stoppage == False and tover == False: #if gameclock hasn't stopped up until this point and no turnover occurred prior to this (this could be other teams shot)
-                    possession_class = 'shot'
-                    break
-                elif stoppage == True and tover == False: #if gameclock stopped before shot and no TO occurred (shot didn't come in transition)
-                    possession_class = 'stoppage'
-                    break
-                elif stoppage == False and tover == True: #if TO occurred prior to shot and no stoppage has occurred
-                    possession_class = 'turnover'
-                elif stoppage == True and tover == True: #if TO occurred and game clock stopped prior to shot
-                    if stoppage_idx < tover_idx: #stoppage occurred first
-                        possession_class = 'stoppage'
-                    if tover_idx < stoppage_idx: #turnover occurred first
-                        possession_class = 'turnover'
-                break
-            elif event == 'TO':
-                tover == True
-                tover_idx = idx
-    
-    if possession_class == None: #no shot occurred, no turnover occurred
-        if stoppage == True: #clock stopped at some point
-            possession_class = 'stoppage'
-        else: #clock never stopped
-            possession_class = 'no shot'
 
+    #find if turnover occurred
+    if 'TO' in trans_events:
+        tover_idx = np.where(trans_events == 'TO')[0][0]
+        tover = True
+        events_idx_dict['turnover'] = tover_idx
+
+    #find if foul occurred
+    if 'FOUL' in trans_events:
+        foul_idx = np.where(trans_events == 'FOUL')[0][0]
+        foul = True
+        events_idx_dict['foul'] = foul_idx
+        
+    #find if shot was taken
+    if 'SHOT' in trans_events:
+        shot_idx = np.where(trans_events == 'SHOT')[0][0]
+        shot = True
+        events_idx_dict['shot'] = shot_idx
+    
+    if len(events_idx_dict) == 0: #no stoppage, turnover, foul, or shot
+        possession_class = 'no shot'
+        
+    else:
+        min_idx = min(events_idx_dict.values())
+        possession_class = [key for key in events_idx_dict if events_idx_dict[key] == min_idx][0]
+    
+    
     return possession_class
