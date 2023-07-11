@@ -54,7 +54,7 @@ class Transition(Game):
         trans_opp = self.event_trans_opp
         #get tracking and event data from the entire game
         all_tracking_df = self.tracking_df
-        all_event_df = self.event_pbp_df
+        all_event_df = self.event_pbp_df.drop('shotClock', axis=1) #remove shot clock value since it only goes to 1 decimal place and tracking data goes to 2 - causes problems when merging
         
         #get event data of the transition opportunity
         trans_event = trans_opp.loc[row_idx]
@@ -70,10 +70,13 @@ class Transition(Game):
 
         #get the next 200 frames (approximately 8 seconds of play)
         snapshot = all_tracking_df.iloc[trans_idx:trans_idx+200]
+        
+        #rename to differentiate from events data columns 
+        snapshot = snapshot.rename(columns={"homePlayers": "homePlayersLoc", "awayPlayers": "awayPlayersLoc"})
 
         #merge the 8 seconds of event data with the corresponding tracking data
-        trans_poss = snapshot.merge(all_event_df, left_on="wallClock", right_on="wallClock", how="left")
-        
+        trans_poss = snapshot.merge(all_event_df, left_on=['wallClock', 'period', 'gameClock'], right_on=['wallClock', 'period', 'gameClock'], how="left")        
+
         return trans_poss
     
     
