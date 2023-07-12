@@ -9,7 +9,7 @@ class Transition(Game):
         self.team = team #'home' or 'away'
         #self.event_trans_opp, self.tracking_trans_opp = self.get_trans_opportunities()
         self.event_trans_opp = self.get_trans_opportunities()
-        self.event_trans_opp, self.trans_possesions = self.get_possession_types()
+        self.event_trans_opp, self.trans_possesions, self.end_of_possessions = self.get_possession_types()
         
     def get_trans_opportunities(self):
         '''
@@ -89,17 +89,20 @@ class Transition(Game):
             - event_trans_opp, df: updated event_trans_opp to include outcome column
             - all_trans_poss, list of df's: stores df for each transition possession
                 -- first row in event_trans_opp corresponds to first df in all_trans_poss
+            - end_of_possessions, list: the index of the end of the transition possession (where the shot, TO, foul, stoppage, etc occurred)
         '''
         event_trans_opp = self.event_trans_opp
         
         outcome = []
         all_trans_poss = []
+        end_of_possessions = []
         for index, row in event_trans_opp.iterrows():
             trans_poss = self.get_trans_possession(index)
             all_trans_poss.append(trans_poss)
-            trans_class = classify_possession(trans_poss)
+            trans_class, end_of_possession = classify_possession(trans_poss)
             outcome.append(trans_class) 
+            end_of_possessions.append(end_of_possession)
         event_trans_opp['OUTCOME'] = outcome
         
-        return event_trans_opp, all_trans_poss
+        return event_trans_opp, all_trans_poss, end_of_possessions
     

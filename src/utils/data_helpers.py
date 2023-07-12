@@ -223,28 +223,29 @@ def classify_possession(trans_possession):
 
     #find if turnover occurred
     if 'TO' in trans_events:
-        tover_idx = np.where(trans_events == 'TO')[0][0]
+        tover_idx = np.where(trans_events == 'TO')[0][0] + 1
         tover = True
         events_idx_dict['turnover'] = tover_idx
 
     #find if foul occurred
     if 'FOUL' in trans_events:
-        foul_idx = np.where(trans_events == 'FOUL')[0][0]
+        foul_idx = np.where(trans_events == 'FOUL')[0][0] + 1
         foul = True
         events_idx_dict['foul'] = foul_idx
         
     #find if shot was taken
     if 'SHOT' in trans_events:
-        shot_idx = np.where(trans_events == 'SHOT')[0][0]
+        shot_idx = np.where(trans_events == 'SHOT')[0][0] + 1
         shot = True
         events_idx_dict['shot'] = shot_idx
     
     if len(events_idx_dict) == 0: #no stoppage, turnover, foul, or shot
         possession_class = 'no shot'
+        min_idx = len(trans_possession) - 1
         
     else:
         min_idx = min(events_idx_dict.values())
         possession_class = [key for key in events_idx_dict if events_idx_dict[key] == min_idx][0]
     
     
-    return possession_class
+    return possession_class, min_idx
