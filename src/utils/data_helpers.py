@@ -199,6 +199,7 @@ def classify_possession(trans_possession):
         - trans_possesion, df: dataframe containing 200 frames (about 8 seconds) of event and tracking data for a single transition opportunity
     OUTPUT:
         - possession class, str: 'shot', 'stoppage', 'turnover', 'no shot'
+        - min_idx, int: index corresponding to the possession class event, ie the end of the transition possession (shot, stoppage, etc)
     '''
     stoppage = False
     stoppage_idx = -10
