@@ -9,7 +9,7 @@ class Transition(Game):
         self.team = team #'home' or 'away'
         #self.event_trans_opp, self.tracking_trans_opp = self.get_trans_opportunities()
         self.event_trans_opp = self.get_trans_opportunities()
-        self.event_trans_opp, self.trans_possesions, self.end_of_possessions = self.get_possession_types()
+        self.event_trans_opp, self.trans_possessions, self.end_of_possessions = self.get_possession_types()
         
     def get_trans_opportunities(self):
         '''
@@ -63,7 +63,12 @@ class Transition(Game):
         eventNum = trans_event['EVENTNUM']
 
         #get the game clock value when this transition opportunity occurred
-        trans_wallClock = all_event_df[all_event_df['EVENTNUM']==eventNum]['wallClock'].values[0]
+        trans_wallClock = all_event_df[all_event_df['EVENTNUM']==eventNum]['wallClock'].values
+        #sometimes the assist into a made shot is given the same event number, so make sure it's the gameclock when shot is taken that's selected
+        if len(trans_wallClock) == 1:
+            trans_wallClock = trans_wallClock[0]
+        else:
+            trans_wallClock = trans_wallClock[1]
 
         #get the index of this transition opportunity in the tracking df
         trans_idx = all_tracking_df[all_tracking_df['wallClock']==trans_wallClock].index[0]
@@ -97,6 +102,7 @@ class Transition(Game):
         all_trans_poss = []
         end_of_possessions = []
         for index, row in event_trans_opp.iterrows():
+            #print(index)
             trans_poss = self.get_trans_possession(index)
             all_trans_poss.append(trans_poss)
             trans_class, end_of_possession = classify_possession(trans_poss)

@@ -142,6 +142,13 @@ def get_data_FGM(event_pbp_df, tracking_df, team):
     '''   
     
     fgm_df = event_pbp_df[event_pbp_df['EVENTMSGTYPE']==1]
+    
+    #remove made FG's where foul occurred (AND 1 opportunities), since we're not including FT's as transition opportunities
+    for index in fgm_df.index:
+        if event_pbp_df['eventType'].iloc[index+1] == 'FOUL':
+            fgm_df = fgm_df.drop(index)
+            
+    
     if team == 'home':
         description1 = 'HOMEDESCRIPTION'
     else:
@@ -185,9 +192,7 @@ def get_data_DREB(event_pbp_df, tracking_df, team):
     
     return reb_def, reb_def_tr
 
-#TODO: CHECK FOR FOUL CAUSING STOPPAGE (CREATE NEW CLASS FOR FOUL)
-    # fould occurs one index before clock stopped
-#TODO: IF TURNOVER OCCURS ONE INDEX BEFORE STOPPAGE, THEN CLASS SHOULD BE TO
+
 def classify_possession(trans_possession):
     '''
     Determine whether a (transition) opportunity ended with a shot, turnover, stoppage, or no shot
