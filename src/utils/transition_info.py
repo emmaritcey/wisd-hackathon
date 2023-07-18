@@ -141,8 +141,8 @@ def get_player_distance(player_locs, player_num):
     return dist, playerId
 
 
-
-def get_poss_summary(possession_df, end_idx, team):
+#TODO: if shot was taken in transition, add the type of shot taken and whether it was made or not
+def get_poss_summary(possession_df, end_idx, event, team):
     '''
     Get summary of a single transition possession: 
         - length of possession in seconds
@@ -150,9 +150,13 @@ def get_poss_summary(possession_df, end_idx, team):
         - length of each pass
         - distance and speed of ball and each player
         
-    possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx])
-    end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
-    team, str: 'home' or 'away'
+    INPUT:
+        - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx])
+        - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
+        - event, series: corresponding event information for the beginning of the transition possession
+        - team, str: 'home' or 'away'
+    OUTPUT:
+        - summary_dict, dict: dictionary containing summary of a single transition possession
     
     '''
     #get length of possession in seconds
@@ -195,19 +199,25 @@ def get_poss_summary(possession_df, end_idx, team):
         def_distances[def_playerId] = def_player_dist
         def_speeds[def_playerId] = average_speed(def_player_dist, poss_length)
     
+    trigger = event['eventType']
+    outcome = event['OUTCOME']
+    outcome_eventmsg = event['EVENTMSGTYPE']
+    outcome_eventmsgaction = event['EVENTMSGACTIONTYPE']
     summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 'Pass Lengths': pass_length, 
                     'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_player_dist, 
-                    'Off Player Speeds': off_speeds, 'Def Player Distances': def_player_dist, 'Def Player Speeds': def_speeds}
+                    'Off Player Speeds': off_speeds, 'Def Player Distances': def_player_dist, 'Def Player Speeds': def_speeds,
+                    'Trigger': trigger, 'Outcome': outcome, 'EventMSG': outcome_eventmsg, 'EventMSGaction': outcome_eventmsgaction}
     
     return summary_dict
 
 
-def get_all_poss_summaries(trans_possessions, end_indices, team):
+def get_all_poss_summaries(trans_possessions, end_indices, events_df, team):
     '''
     create a list of dictionaries containing the summaries of each transition possession
     INPUT:
         - trans_possessions, list of df's: stores df for each transition possession (Transition.trans_possesions)
         - end_indices, list of ints: indices of the end of each transition possession (where the shot, TO, foul, stoppage, etc occurred)
+        - events_df, df: dataframe containing event info for each transition opportunity
         - team, str: 'home' or 'away'
     OUTPUT:
         - trans_summaries, list of dicts: contains a dictionary for each transition possession which summarizes the possession
@@ -217,7 +227,9 @@ def get_all_poss_summaries(trans_possessions, end_indices, team):
     #iterate through list of dataframes
     for i in range(0, len(trans_possessions)):
         #print(trans_possessions[i])
-        trans_summaries.append(get_poss_summary(trans_possessions[i], end_indices[i], team))
+        trans_summaries.append(get_poss_summary(trans_possessions[i], end_indices[i], events_df.iloc[i], team))
         
     return trans_summaries
+    
+    
     
