@@ -252,6 +252,13 @@ def classify_possession(trans_possession):
     else:
         min_idx = min(events_idx_dict.values())
         possession_class = [key for key in events_idx_dict if events_idx_dict[key] == min_idx][0]
+            
+    if possession_class == 'shot':
+        outcome_msg = trans_possession['EVENTMSGTYPE'].iloc[min_idx]
+        outcome_msgaction = trans_possession['EVENTMSGACTIONTYPE'].iloc[min_idx]
+    else:
+        outcome_msg = np.nan
+        outcome_msgaction = np.nan
     
     
-    return possession_class, min_idx
+    return possession_class, min_idx, outcome_msg, outcome_msgaction

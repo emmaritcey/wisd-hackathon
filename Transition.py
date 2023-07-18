@@ -98,17 +98,23 @@ class Transition(Game):
         '''
         event_trans_opp = self.event_trans_opp
         
-        outcome = []
+        outcomes = []
+        outcomes_msg = []
+        outcomes_msgaction = []
         all_trans_poss = []
         end_of_possessions = []
         for index, row in event_trans_opp.iterrows():
             #print(index)
             trans_poss = self.get_trans_possession(index)
             all_trans_poss.append(trans_poss)
-            trans_class, end_of_possession = classify_possession(trans_poss)
-            outcome.append(trans_class) 
+            trans_class, end_of_possession, outcome_msg, outcome_msgaction = classify_possession(trans_poss)
+            outcomes.append(trans_class) 
+            outcomes_msg.append(outcome_msg)
+            outcomes_msgaction.append(outcome_msgaction)
             end_of_possessions.append(end_of_possession)
-        event_trans_opp['OUTCOME'] = outcome
+        event_trans_opp['OUTCOME'] = outcomes
+        event_trans_opp['OUTCOME MSGTYPE'] = outcomes_msg
+        event_trans_opp['OUTCOME MSGTACTIONTYPE'] = outcomes_msgaction
         
         return event_trans_opp, all_trans_poss, end_of_possessions
     
