@@ -114,7 +114,7 @@ class Transition(Game):
             end_of_possessions.append(end_of_possession)
         event_trans_opp['OUTCOME'] = outcomes
         event_trans_opp['OUTCOME MSGTYPE'] = outcomes_msg
-        event_trans_opp['OUTCOME MSGTACTIONTYPE'] = outcomes_msgaction
+        event_trans_opp['OUTCOME MSGACTIONTYPE'] = outcomes_msgaction
         
         return event_trans_opp, all_trans_poss, end_of_possessions
     

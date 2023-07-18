@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def get_possession_length(possession_df, end_idx):
     '''
     get elapsed time between turnover and shot
@@ -201,12 +202,12 @@ def get_poss_summary(possession_df, end_idx, event, team):
     
     trigger = event['eventType']
     outcome = event['OUTCOME']
-    outcome_eventmsg = event['EVENTMSGTYPE']
-    outcome_eventmsgaction = event['EVENTMSGACTIONTYPE']
+    outcome_eventmsg = event['OUTCOME MSGTYPE']
+    outcome_eventmsgaction = event['OUTCOME MSGACTIONTYPE']
     summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 'Pass Lengths': pass_length, 
-                    'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_player_dist, 
-                    'Off Player Speeds': off_speeds, 'Def Player Distances': def_player_dist, 'Def Player Speeds': def_speeds,
-                    'Trigger': trigger, 'Outcome': outcome, 'EventMSG': outcome_eventmsg, 'EventMSGaction': outcome_eventmsgaction}
+                    'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
+                    'Off Player Speeds': off_speeds, 'Def Player Distances': def_distances, 'Def Player Speeds': def_speeds,
+                    'Trigger': trigger, 'Outcome': outcome, 'OutcomeMSG': outcome_eventmsg, 'OutcomeMSGaction': outcome_eventmsgaction}
     
     return summary_dict
 
