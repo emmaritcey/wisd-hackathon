@@ -3,13 +3,9 @@ from src.preprocess.load_data import load_game_file, load_metadata
 from src.utils.data_helpers import get_team_name
 import json
 
+#TODO: find direction each team is going to start the game and the second half
 class Game:
     def __init__(self, game_id):
-        self.game_id = game_id
-        self.pbp_df = self.get_playbyplay()
-        self.events_df = self.get_events()
-        self.tracking_df = self.get_tracking()
-        self.event_pbp_df = self.merge_events_with_pbp()
         self.game_id = game_id
         self.pbp_df = self.get_playbyplay()
         self.events_df = self.get_events()

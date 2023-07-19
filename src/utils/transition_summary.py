@@ -1,5 +1,6 @@
 import numpy as np
 
+#TODO: what time did the ball cross half at? (time elapsed to cross half)
 
 def get_possession_length(possession_df, end_idx):
     '''
@@ -154,7 +155,7 @@ def get_poss_summary(possession_df, end_idx, event, team):
     INPUT:
         - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx])
         - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
-        - event, series: corresponding event information for the beginning of the transition possession
+        - event, series: corresponding single event information for the beginning of the transition possession
         - team, str: 'home' or 'away'
     OUTPUT:
         - summary_dict, dict: dictionary containing summary of a single transition possession
@@ -212,7 +213,7 @@ def get_poss_summary(possession_df, end_idx, event, team):
     return summary_dict
 
 
-def get_all_poss_summaries(trans_possessions, end_indices, events_df, team):
+def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, first_x_seconds = 8):
     '''
     create a list of dictionaries containing the summaries of each transition possession
     INPUT:
@@ -220,6 +221,7 @@ def get_all_poss_summaries(trans_possessions, end_indices, events_df, team):
         - end_indices, list of ints: indices of the end of each transition possession (where the shot, TO, foul, stoppage, etc occurred)
         - events_df, df: dataframe containing event info for each transition opportunity
         - team, str: 'home' or 'away'
+        - first_x_seconds, int, optional: only gather info for first x seconds of transition possession (likely use to look at first 3 seconds)
     OUTPUT:
         - trans_summaries, list of dicts: contains a dictionary for each transition possession which summarizes the possession
     '''
@@ -227,8 +229,17 @@ def get_all_poss_summaries(trans_possessions, end_indices, events_df, team):
     trans_summaries = []
     #iterate through list of dataframes
     for i in range(0, len(trans_possessions)):
+        end_indice = end_indices[i]
         #print(trans_possessions[i])
-        trans_summaries.append(get_poss_summary(trans_possessions[i], end_indices[i], events_df.iloc[i], team))
+        if first_x_seconds == 8: #use end_indices[i] as the final frame of the possession
+            trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team))
+        else: #looking at shorter range of time, say first three seconds of the possession
+            time_end_indice = first_x_seconds*25 + 1 #25 frames per second
+            if time_end_indice > end_indice: #transition possession ended before the chosen time
+                trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team))
+            else: 
+                trans_summaries.append(get_poss_summary(trans_possessions[i], time_end_indice, events_df.iloc[i], team))
+            
         
     return trans_summaries
     
