@@ -205,7 +205,7 @@ def get_poss_summary(possession_df, end_idx, event, team):
     outcome = event['OUTCOME']
     outcome_eventmsg = event['OUTCOME MSGTYPE']
     outcome_eventmsgaction = event['OUTCOME MSGACTIONTYPE']
-    summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 'Pass Lengths': pass_length, 
+    summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 'Pass Lengths': pass_lengths, 
                     'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
                     'Off Player Speeds': off_speeds, 'Def Player Distances': def_distances, 'Def Player Speeds': def_speeds,
                     'Trigger': trigger, 'Outcome': outcome, 'OutcomeMSG': outcome_eventmsg, 'OutcomeMSGaction': outcome_eventmsgaction}

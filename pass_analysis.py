@@ -1,3 +1,4 @@
+import pandas as pd
 import numpy as np
 import math
 from src.utils.data_helpers import get_player_name
@@ -56,7 +57,7 @@ def num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, tea
         ball_relative_x_start = np.array(ball_start_loc[0]) - np.array(player_x_locs_start) #x distance between ball and each player (pos = ball ahead, neg = ball behind)
         ball_relative_x_end = np.array(ball_end_loc[0]) - np.array(player_x_locs_end)
 
-        ground_made_up = ball_relative_x_end - ball_relative_x_start
+        ground_made_up = np.around(ball_relative_x_end - ball_relative_x_start, 2)
         
         #find players that the ball is behind when the pass is made (smaller x value = farther from net)
         behind_to_start = ball_start_loc[0] < np.array(player_x_locs_start)
@@ -182,5 +183,7 @@ def get_all_passes(trans_possessions, end_indices, events_df, shooting_side, tea
     for idx in range(0, len(trans_possessions)):
         pass_dict = get_possession_passes(trans_possessions[idx], end_indices[idx], shooting_side, team, events_df.iloc[idx], pass_dict, idx)
         
-    return pass_dict
+        
+    pass_df = pd.DataFrame(pass_dict)
+    return pass_df
     
