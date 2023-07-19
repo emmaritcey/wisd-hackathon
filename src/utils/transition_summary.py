@@ -173,7 +173,8 @@ def get_poss_summary(possession_df, end_idx, event, team):
     if len(passes) > 0:
         for i in range(0,num_passes):
             pass_idx = passes[i]
-            pass_lengths.append(pass_length(possession_df, pass_idx))
+            p = pass_length(possession_df, pass_idx)
+            pass_lengths.append(p)
     
     #get the total distance travelled by the ball and its average speed
     
