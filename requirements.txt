@@ -6,3 +6,5 @@ matplotlib
 numpy
 pandas
 nba-api
+plotly
+nbformat

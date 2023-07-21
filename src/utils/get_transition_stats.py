@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 from src.utils.pass_analysis import get_pass_data
-from src.utils.data_helpers import get_team_id
+from src.utils.data_helpers import get_team_name
 
 from Transition import Transition
 import os
@@ -287,8 +287,10 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     
     #add team and game info to both dataframes
     trans_summaries_df['Team Id'] = teamId
+    trans_summaries_df['Team Name'] = get_team_name(teamId)
     trans_summaries_df['Game Id'] = gameId
     pass_df['Team Id'] = teamId
+    pass_df['Team Name'] = get_team_name(teamId)
     pass_df['Game Id'] = gameId
     
     
