@@ -1,10 +1,12 @@
 import pandas as pd
 import numpy as np
+import os
 from src.utils.pass_analysis import get_pass_data
-from src.utils.data_helpers import get_team_name
+from src.utils.data_helpers import get_team_name, travel_dist
+from src.utils.drive_analysis import get_drive_data
 
 from Transition import Transition
-import os
+
 
 #TODO: what time did the ball cross half at? (time elapsed to cross half)
 
@@ -43,23 +45,6 @@ def count_event(possession_df, event_name, end_idx, poss_length):
     n_events_per_sec = round(n_events / poss_length, 2)
     
     return n_events, n_events_per_sec
-
-
-
-def travel_dist(locations):
-    '''
-    calculate the total distance the object has travelled by calculating each consecutive euclidean distance
-    INPUT:
-        - locations, list containing 2 lists: sublist 1 contains x locations, sublist 2 contains y locations
-    OUTPUT:
-        - total distance the ball has travelled in a possession
-    '''
-    # get the differences of each consecutive value in each sublist
-    diff = np.diff(locations, axis=1)
-    # square the differences and add corresponding x and y pairs, then get the square root of that sum
-    dist = np.sqrt((diff ** 2).sum(axis=0))
-    # Then return the sum of all the distances
-    return round(dist.sum(), 2)
 
 
 def get_ball_distances(possession_df, end_idx):
@@ -219,7 +204,7 @@ def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, firs
     return trans_summaries
     
 
-def get_pass_outcomes(all_poss_summaries):
+def get_poss_outcomes(all_poss_summaries, type):
     '''
     from the pass summary data, record the trigger/outcome for each pass to add to the pass analysis dataframe
     INPUT:
@@ -229,10 +214,15 @@ def get_pass_outcomes(all_poss_summaries):
     outcomes = []
     outcomes_msg = []
     outcomes_msgaction = []
+    
+    if type == 'pass':
+        col = '# Passes'
+    else:
+        col = '# Dribbles'
 
     for idx in range (0,len(all_poss_summaries)):
-        n_passes = all_poss_summaries[idx]['# Passes']
-        for jdx in range(0,n_passes):
+        num = all_poss_summaries[idx][col]
+        for jdx in range(0,num):
             triggers.append(all_poss_summaries[idx]['Trigger'])
             outcomes.append(all_poss_summaries[idx]['Outcome'])
             outcomes_msg.append(all_poss_summaries[idx]['OutcomeMSG'])
@@ -274,13 +264,22 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
   
     trans_summaries = get_all_poss_summaries(possessions_tracking, end_of_possessions, possessions_event, team, first_x_seconds) 
     pass_df = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
+    drive_df = get_drive_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
+
     
     #add the triggers/outcomes to each pass in pass_df
-    triggers, outcomes, outcomes_msg, outcomes_msgaction = get_pass_outcomes(trans_summaries)
+    triggers, outcomes, outcomes_msg, outcomes_msgaction = get_poss_outcomes(trans_summaries, 'pass')
     pass_df['Transition Trigger'] = triggers
     pass_df['Outcome'] = outcomes
     pass_df['OutcomeMSG'] = outcomes_msg
     pass_df['OutcomeMSGaction'] = outcomes_msgaction
+    
+    #TODO: FIX SO THAT I CAN ADD THIS INFO TO DRIVE DATA (DOESN'T WORK BECAUSE TRANS_SUMMARIES CONTAINS # OF DRIBBLES, NOT # OF DRIVES)
+    # triggers2, outcomes2, outcomes_msg2, outcomes_msgaction2 = get_poss_outcomes(trans_summaries, 'drive')
+    # drive_df['Transition Trigger'] = triggers2
+    # drive_df['Outcome'] = outcomes2
+    # drive_df['OutcomeMSG'] = outcomes_msg2
+    # drive_df['OutcomeMSGaction'] = outcomes_msgaction2
         
     #convert dictionary to dataframe 
     trans_summaries_df = pd.DataFrame(trans_summaries)
@@ -292,39 +291,62 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     pass_df['Team Id'] = teamId
     pass_df['Team Name'] = get_team_name(teamId)
     pass_df['Game Id'] = gameId
+    drive_df['Team Id'] = teamId
+    drive_df['Team Name'] = get_team_name(teamId)
+    drive_df['Game Id'] = gameId
     
     
-    return trans_summaries_df, pass_df
+    return trans_summaries_df, pass_df, drive_df
 
+
+#TODO: use pickle to save transition objects (right now just saving as strings which is useless)
 def get_all_games_data():
     transition_objects = []
+    gameId_list = []
+    team_list = []
     all_poss_summaries = pd.DataFrame()
     all_pass_stats = pd.DataFrame()
+    all_drive_stats = pd.DataFrame()
     idx = 0
     print('Getting transition data for game:')
     for gameId in os.listdir('data/games'):
         print(gameId)
         for team in ['home', 'away']:
             transition = Transition(gameId, team)
-            possession_summaries, pass_stats = get_single_game_data(transition, team)
+            possession_summaries, pass_stats, drive_stats = get_single_game_data(transition, team)
             transition_objects.append(transition)
+            gameId_list.append(gameId)
+            team_list.append(team)
             
             all_poss_summaries = pd.concat([all_poss_summaries, possession_summaries], ignore_index=True)
             all_pass_stats = pd.concat([all_pass_stats, pass_stats], ignore_index=True)
+            all_drive_stats = pd.concat([all_drive_stats, drive_stats], ignore_index=True)
         idx += 1
     
+    transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
+    transition_possessions = pd.DataFrame(transition_possessions)
+    
     #save the data
-    save_loc = 'data/transition'
+    save_loc = 'data/transition/test'
     if os.path.isdir(save_loc) == False:
         os.mkdir(save_loc)
 
     all_pass_stats.to_csv(save_loc+'/pass_stats.csv', index=False)
+    all_drive_stats.to_csv(save_loc+'/drive_stats.csv', index=False)
     all_poss_summaries.to_csv(save_loc + '/possession_summaries.csv', index=False)
+    transition_possessions.to_csv(save_loc+'/transition_possessions.csv', index=False)
     
     
     
+#%%
 def main():
     get_all_games_data()
     
     
 main()
+
+#%%
+team = 'home'
+transition = Transition('0042100306', team)
+       
+# %%

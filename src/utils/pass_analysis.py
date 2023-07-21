@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import math
-from src.utils.data_helpers import get_player_name
+from src.utils.data_helpers import get_player_name, travel_dist
 
 #TODO: add and save pass start and end location
 
@@ -15,7 +15,7 @@ def get_pass_indices(possession_df, end_idx):
         - pass_indices, list
     '''
 
-    possession_df = possession_df.iloc[0:end_idx]
+    possession_df = possession_df.iloc[0:end_idx+1]
     pass_indices = list(possession_df[possession_df['eventType']=='PASS'].index)  #get list of indices of each pass
     
     return pass_indices
@@ -30,7 +30,7 @@ def num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, tea
         - shooting_side, str: 'pos' (left side) or 'neg' (right side) --> side that the offensive team is shooting on 
         - team, str: 'home' or 'away'
     '''
-    possession_df = possession_df.iloc[pass_idx:end_idx]
+    possession_df = possession_df.iloc[pass_idx:end_idx+1]
     
     try: 
         #say first touch after the pass is when it's caught
@@ -89,9 +89,9 @@ def time_of_passes(pass_indices):
 
     return times
     
-def pass_length(possession_df, pass_idx, end_idx, shooting_side):
+def pass_distance(possession_df, pass_idx, end_idx, shooting_side):
     '''
-    get the length of the pass
+    get the distanceof the pass
     INPUT:
         - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
         - pass_idx, int: index of the pass
@@ -103,15 +103,21 @@ def pass_length(possession_df, pass_idx, end_idx, shooting_side):
         - dist_y, int: y distance (across the court)
         - dist, int: euclidean distance
     '''
-    possession_df = possession_df.iloc[pass_idx:end_idx]
+    possession_df = possession_df.iloc[pass_idx:end_idx+1]
     try:
         catch_idx = np.where(possession_df['eventType'].values == 'TOUCH')[0][0]
         ball_start_loc = np.array(possession_df.iloc[0]['ball'])
         ball_end_loc = np.array(possession_df.iloc[catch_idx]['ball'])
         
         #if shooting_side == 'neg': #multiply everything by -1 (MAYBE CHANGE THIS LATER)
-        ball_start_loc = ball_start_loc*shooting_side #flips court if shooting on negative side
-        ball_end_loc = ball_end_loc*shooting_side #flips court if shooting of negative side
+        ball_start_loc[0] = ball_start_loc[0]*shooting_side #flips court if shooting on negative side
+        ball_end_loc[0] = ball_end_loc[0]*shooting_side #flips court if shooting of negative side
+        if shooting_side == 1: #flip y axis so left to right is negative progression and right to left is positive progression
+            ball_start_loc[1] = ball_start_loc[1]*(-1)
+            ball_end_loc[1] = ball_end_loc[1]*(-1)
+        
+        #ball_start_loc = ball_start_loc*shooting_side #flips court if shooting on negative side
+        #ball_end_loc = ball_end_loc*shooting_side #flips court if shooting of negative side
         
         dist_x = round(ball_end_loc[0] - ball_start_loc[0],2)
         dist_y = round(ball_end_loc[1] - ball_start_loc[1],2)
@@ -152,12 +158,8 @@ def get_passer(possession_df, pass_idx, team):
         if curr_dist < min_dist:
             min_dist = curr_dist
             min_idx = idx
-
-
-    try:
-        playerId = pass_df[col][min_idx]['playerId']
-    except AttributeError:
-        print('oh no')
+            
+    playerId = pass_df[col][min_idx]['playerId']
     playerName = get_player_name(playerId)
     
     
@@ -186,7 +188,7 @@ def get_possession_passes(possession_df, end_idx, shooting_side, team, event, pa
     for idx in range(0, len(pass_indices)):
         pass_idx = pass_indices[idx]
         time = time_to_pass[idx]
-        distances = pass_length(possession_df, pass_idx, end_idx, shooting_side)
+        distances = pass_distance(possession_df, pass_idx, end_idx, shooting_side)
         ground_made_up, num_def_passed = num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, team)
         playerName = get_passer(possession_df, pass_idx, team)
         pass_dict['Pass Index'].append(pass_idx)

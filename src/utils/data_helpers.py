@@ -303,3 +303,30 @@ def get_team_directions(event_pbp_df, tracking_df):
             away_side2 = -1  
             
     return home_side1, home_side2, away_side1, away_side2
+
+
+def travel_dist(locations):
+    '''
+    calculate the total euclidean distance the object has travelled by calculating each consecutive euclidean distance
+    INPUT:
+        - locations, list containing 2 lists: sublist 1 contains x locations, sublist 2 contains y locations
+    OUTPUT:
+        - total distance the ball has travelled in a possession
+    '''
+    # get the differences of each consecutive value in each sublist
+    diff = np.diff(locations, axis=1)
+    # square the differences and add corresponding x and y pairs, then get the square root of that sum
+    dist = np.sqrt((diff ** 2).sum(axis=0))
+    # Then return the sum of all the distances
+    return round(dist.sum(), 2)
+
+
+def travel_dist_1d(locations):
+    ''''
+    get the total x distance and total y distance the object has travelled by calculating each consective difference and summing the values
+    '''
+    # get the differences of each consecutive value in each sublist
+    diff = np.diff(locations, axis=1)
+    dist = np.abs(diff).sum(axis=1)
+    
+    return round(dist[0],2), round(dist[1],2)

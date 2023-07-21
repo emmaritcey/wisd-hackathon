@@ -109,7 +109,10 @@ class Transition(Game):
             trans_poss = self.get_trans_possession(index)
             
             trans_class, end_of_possession, outcome_msg, outcome_msgaction = classify_possession(trans_poss)
-            if end_of_possession <= 2: #too short to analyze, don't include this possession, delete it from event_trans_opp and don't add it to all_trans_poss
+            temp_df = trans_poss.iloc[0:end_of_possession+1]
+            #check if nothing has happened in the 8 seconds since the change of possession (ball may have gotten lost after made shot, etc)
+            #too short to analyze, don't include this possession, delete it from event_trans_opp and don't add it to all_trans_poss
+            if end_of_possession <= 2 or ('TMO' in temp_df['eventType'].values) or (trans_poss['eventType'].isnull().sum() >= 198):
                 idx_to_remove.append(index)
             else: 
                 all_trans_poss.append(trans_poss)
