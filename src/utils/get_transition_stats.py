@@ -318,3 +318,11 @@ def get_all_games_data():
 
     all_pass_stats.to_csv(save_loc+'/pass_stats.csv', index=False)
     all_poss_summaries.to_csv(save_loc + '/possession_summaries.csv', index=False)
+    
+    
+    
+def main():
+    get_all_games_data()
+    
+    
+main()

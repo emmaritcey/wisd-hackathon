@@ -2,9 +2,8 @@ import boto3
 import os
 from pathlib import Path
 from dotenv import load_dotenv
-load_dotenv()
 
-
+#TODO: double check if this works
 
 def download_s3_bucket(bucket_name, keys):
     
@@ -29,3 +28,11 @@ def download_s3_bucket(bucket_name, keys):
                 print(obj.key + ' already exists')
 
 
+def main():
+    #load_dotenv() #not sure if i need this
+    
+    bucket = 'sportradar-wisd-data'
+    keys = ['games', 'metadata'] #folders within the bucket
+    download_s3_bucket(bucket, keys)
+    
+main()
