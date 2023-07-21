@@ -39,9 +39,9 @@ def num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, tea
         ball_start_loc = possession_df.iloc[0]['ball']
         ball_end_loc = possession_df.iloc[catch_idx]['ball']
         
-        if shooting_side == 'neg': #multiply everything by -1 (MAYBE CHANGE THIS LATER)
-            ball_start_loc = -1*ball_start_loc
-            ball_end_loc = -1*ball_end_loc
+        #if shooting_side == 'neg': #multiply everything by -1 (MAYBE CHANGE THIS LATER)
+        ball_start_loc = np.array(ball_start_loc)*shooting_side #flips court if shooting on negative side
+        ball_end_loc = np.array(ball_end_loc)*shooting_side #flips court if shooting of negative side
         
         #get the location of all defensive players when ball is thrown and when ball is caught
         if team == 'away': #offensive team
@@ -51,11 +51,11 @@ def num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, tea
         def_locations_start = possession_df.iloc[0][col]
         def_locations_end = possession_df.iloc[catch_idx][col]
         
-        player_x_locs_start = [xyz['xyz'][0] for xyz in def_locations_start]
-        player_x_locs_end = [xyz['xyz'][0] for xyz in def_locations_end]
+        player_x_locs_start = np.array([xyz['xyz'][0] for xyz in def_locations_start])*shooting_side #flips court if offensive team shooting on negative side
+        player_x_locs_end = np.array([xyz['xyz'][0] for xyz in def_locations_end])*shooting_side #flips court if offensive team shooting on negative side
         
-        ball_relative_x_start = np.array(ball_start_loc[0]) - np.array(player_x_locs_start) #x distance between ball and each player (pos = ball ahead, neg = ball behind)
-        ball_relative_x_end = np.array(ball_end_loc[0]) - np.array(player_x_locs_end)
+        ball_relative_x_start = ball_start_loc[0] - player_x_locs_start #x distance between ball and each player (pos = ball ahead, neg = ball behind)
+        ball_relative_x_end = ball_end_loc[0] - player_x_locs_end
 
         ground_made_up = np.around(ball_relative_x_end - ball_relative_x_start, 2)
         
@@ -89,13 +89,47 @@ def time_of_passes(pass_indices):
 
     return times
     
+def pass_length(possession_df, pass_idx, end_idx, shooting_side):
+    '''
+    get the length of the pass
+    INPUT:
+        - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
+        - pass_idx, int: index of the pass
+        - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])   
+        - shooting_side, str: 'pos' (left side) or 'neg' (right side) --> side that the offensive team is shooting on 
+
+    OUTPUT:
+        - dist_x, int: x distance (up the court)
+        - dist_y, int: y distance (across the court)
+        - dist, int: euclidean distance
+    '''
+    possession_df = possession_df.iloc[pass_idx:end_idx]
+    try:
+        catch_idx = np.where(possession_df['eventType'].values == 'TOUCH')[0][0]
+        ball_start_loc = np.array(possession_df.iloc[0]['ball'])
+        ball_end_loc = np.array(possession_df.iloc[catch_idx]['ball'])
+        
+        #if shooting_side == 'neg': #multiply everything by -1 (MAYBE CHANGE THIS LATER)
+        ball_start_loc = ball_start_loc*shooting_side #flips court if shooting on negative side
+        ball_end_loc = ball_end_loc*shooting_side #flips court if shooting of negative side
+        
+        dist_x = round(ball_end_loc[0] - ball_start_loc[0],2)
+        dist_y = round(ball_end_loc[1] - ball_start_loc[1],2)
+        dist = round(math.dist(ball_start_loc[0:2], ball_end_loc[0:2]), 2)
+    except: #no catch means turnover
+        dist_x = np.nan
+        dist_y = np.nan  
+        dist = np.nan
+
+    return dist_x, dist_y, dist
     
-def get_passer(possession_df, pass_idx):
+def get_passer(possession_df, pass_idx, team):
     '''
     get the name of the player who made the pass
     INPUT:
         - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
         - pass_idx, int: index of the pass  
+        - team, str: 'home' or 'away'
     OUTPUT:
         - playerName, str  
     '''
@@ -103,12 +137,17 @@ def get_passer(possession_df, pass_idx):
     pass_df = possession_df.iloc[pass_idx]
     #get just the x and y coordinates of the ball
     ball_loc = pass_df['ball'][0:2]
+    
+    if team == 'home':
+        col = 'homePlayersLoc'
+    else:
+        col = 'awayPlayersLoc'
 
     #get the player who made the pass
     #consider them to be the player closest to the ball at the time of the pass 
     min_dist = 100
     for idx in range(0,5):
-        player_loc = pass_df['awayPlayersLoc'][idx]['xyz'][0:2]
+        player_loc = pass_df[col][idx]['xyz'][0:2]
         curr_dist = math.dist(ball_loc, player_loc)
         if curr_dist < min_dist:
             min_dist = curr_dist
@@ -116,7 +155,7 @@ def get_passer(possession_df, pass_idx):
 
 
     try:
-        playerId = pass_df['awayPlayersLoc'][min_idx]['playerId']
+        playerId = pass_df[col][min_idx]['playerId']
     except AttributeError:
         print('oh no')
     playerName = get_player_name(playerId)
@@ -147,10 +186,12 @@ def get_possession_passes(possession_df, end_idx, shooting_side, team, event, pa
     for idx in range(0, len(pass_indices)):
         pass_idx = pass_indices[idx]
         time = time_to_pass[idx]
+        distances = pass_length(possession_df, pass_idx, end_idx, shooting_side)
         ground_made_up, num_def_passed = num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, team)
-        playerName = get_passer(possession_df, pass_idx)
+        playerName = get_passer(possession_df, pass_idx, team)
         pass_dict['Pass Index'].append(pass_idx)
         pass_dict['Pass Time'].append(time)
+        pass_dict['Pass Distance'].append(distances)
         pass_dict['Ground Made Up'].append(ground_made_up)
         pass_dict['# Defenders Passed'].append(num_def_passed)
         pass_dict['Passer'].append(playerName)
@@ -159,14 +200,14 @@ def get_possession_passes(possession_df, end_idx, shooting_side, team, event, pa
     return pass_dict
 
 
-def get_all_passes(trans_possessions, end_indices, events_df, shooting_side, team):
+def get_pass_data(trans_possessions, end_indices, events_df, shooting_directions, team):
     '''
     get information on all passes from all transition possessions
     INPUT:
         - trans_possessions, list of df's: stores df for each transition possession (Transition.trans_possesions)
         - end_indices, list of ints: indices of the end of each transition possession (where the shot, TO, foul, stoppage, etc occurred)
         - events_df, df: dataframe containing event info for each transition opportunity
-        - shooting_side, str: 'pos' (left side) or 'neg' (right side) --> side that the offensive team is shooting on 
+        - shooting_directions, 2d tuple: contains 1 (right side) or -1 (left side) first # is direction in first half, second is direction in second half
         - team, str: 'home' or 'away'    
     OUTPUT:
         - pass_dict, dict: contains data from all passes made in transition (all possessions)
@@ -178,12 +219,20 @@ def get_all_passes(trans_possessions, end_indices, events_df, shooting_side, tea
     #ground made up --> ground the ball made up on each defender from the pass (if 2 feet behind defender and then 1 foot behind defender after pass, then it would be 1 for that defender)
     #defenders passed --> number of defenders the ball passed in the air
     #transition index --> the transition possession the pass occurred in (to be able to map it back to its tracking and event data)
-    pass_dict = {'Pass Index': [], 'Pass Time': [], 'Ground Made Up': [], '# Defenders Passed': [], 'Passer': [], 'Transition Index': []}
+    pass_dict = {'Pass Index': [], 'Pass Time': [], 'Pass Distance': [], 'Ground Made Up': [], 
+                 '# Defenders Passed': [], 'Passer': [], 'Transition Index': []}
     
     for idx in range(0, len(trans_possessions)):
-        pass_dict = get_possession_passes(trans_possessions[idx], end_indices[idx], shooting_side, team, events_df.iloc[idx], pass_dict, idx)
+        event = events_df.iloc[idx]
+        if event['PERIOD'] == 1 or event['PERIOD'] == 2:
+            shooting_direction = shooting_directions[0]
+        else:
+            shooting_direction = shooting_directions[1]
+            
+        pass_dict = get_possession_passes(trans_possessions[idx], end_indices[idx], shooting_direction, team, events_df.iloc[idx], pass_dict, idx)
         
         
     pass_df = pd.DataFrame(pass_dict)
     return pass_df
     
+

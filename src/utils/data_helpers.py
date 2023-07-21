@@ -262,3 +262,44 @@ def classify_possession(trans_possession):
     
     
     return possession_class, min_idx, outcome_msg, outcome_msgaction
+
+
+def get_team_directions(event_pbp_df, tracking_df):
+    '''
+    get the event data and tracking data for all defensive rebounds for one team in a game
+    INPUT:
+        - event_pbp_df, DF: all event data from the game merged with the play-by-play data
+        - tracking_df, df: all tracking data from the game):
+    OUTPUT:
+        - home/away_side1/1: 1 = shooting on positive x side (right), -1 = shooting on negative x side (left)
+    '''
+    
+    first_shot = event_pbp_df[event_pbp_df['eventType']=='SHOT'].iloc[0]
+    if first_shot['HOMEDESCRIPTION'] is not None: 
+        if 'FOUL' in first_shot['HOMEDESCRIPTION']: #away team took shot (home team fouled)
+            team = 'away'
+        else: #home team took shot
+            team = 'home' 
+    else: # first_shot['VISITORDESCRIPTION'] is not None: 
+        if 'FOUL' in first_shot['VISITORDESCRIPTION']: #home team took shot (away team fouled)#away team took shot
+            team = 'home'
+        else: 
+            team = 'away'
+    time_of_shot = event_pbp_df[event_pbp_df['eventType']=='SHOT'].iloc[0]['wallClock']
+
+    ball_location = tracking_df[tracking_df['wallClock'] == time_of_shot]['ball'].iloc[0]
+
+    #if ball is in positive x location --> this team is shooting on the right/positive end, if negative then shooting on left/negative side
+    #1/2 indicates 1st/2nd half
+    if (ball_location[0] > 0 and team == 'home') or (ball_location[0] < 0 and team == 'away'):
+            home_side1 = 1
+            home_side2 = -1
+            away_side1 = -1
+            away_side2 = 1
+    if  (ball_location[0] > 0 and team == 'away') or (ball_location[0] < 0 and team == 'home'):    
+            home_side1 = -1
+            home_side2 = 1
+            away_side1 = 1
+            away_side2 = -1  
+            
+    return home_side1, home_side2, away_side1, away_side2

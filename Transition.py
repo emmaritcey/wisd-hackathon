@@ -103,15 +103,22 @@ class Transition(Game):
         outcomes_msgaction = []
         all_trans_poss = []
         end_of_possessions = []
+        idx_to_remove = []
         for index, row in event_trans_opp.iterrows():
             #print(index)
             trans_poss = self.get_trans_possession(index)
-            all_trans_poss.append(trans_poss)
+            
             trans_class, end_of_possession, outcome_msg, outcome_msgaction = classify_possession(trans_poss)
-            outcomes.append(trans_class) 
-            outcomes_msg.append(outcome_msg)
-            outcomes_msgaction.append(outcome_msgaction)
-            end_of_possessions.append(end_of_possession)
+            if end_of_possession <= 2: #too short to analyze, don't include this possession, delete it from event_trans_opp and don't add it to all_trans_poss
+                idx_to_remove.append(index)
+            else: 
+                all_trans_poss.append(trans_poss)
+                outcomes.append(trans_class) 
+                outcomes_msg.append(outcome_msg)
+                outcomes_msgaction.append(outcome_msgaction)
+                end_of_possessions.append(end_of_possession)
+        
+        event_trans_opp = event_trans_opp.drop(idx_to_remove).reset_index(drop=True)
         event_trans_opp['OUTCOME'] = outcomes
         event_trans_opp['OUTCOME MSGTYPE'] = outcomes_msg
         event_trans_opp['OUTCOME MSGACTIONTYPE'] = outcomes_msgaction

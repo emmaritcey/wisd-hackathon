@@ -1,4 +1,10 @@
+import pandas as pd
 import numpy as np
+from src.utils.pass_analysis import get_pass_data
+from src.utils.data_helpers import get_team_id
+
+from Transition import Transition
+import os
 
 #TODO: what time did the ball cross half at? (time elapsed to cross half)
 
@@ -14,9 +20,10 @@ def get_possession_length(possession_df, end_idx):
     start_time = possession_df.iloc[0]['gameClock']
     end_time = possession_df.iloc[end_idx]['gameClock']
     poss_length = round(start_time - end_time,2)
+    if poss_length == 0:
+        print('oh no')
     
     return poss_length
-
 
 
 def count_event(possession_df, event_name, end_idx, poss_length):
@@ -37,31 +44,6 @@ def count_event(possession_df, event_name, end_idx, poss_length):
     
     return n_events, n_events_per_sec
 
-
-def pass_length(possession_df, pass_idx):
-    '''
-    get the x distance (up the court) and y distance (across the court) of a single pass
-    INPUT:
-        - possession_df, df: contains tracking data of entire single possession
-        - pass_idx, int: index of the pass to calculate the distance of
-    OUTPUT:
-        - dist_x, int: x distance (up the court)
-        - dist_y, int: y distance (across the court)
-    '''
-    possession_df = possession_df.iloc[pass_idx:]
-    try:
-        catch_idx = np.where(possession_df['eventType'].values == 'TOUCH')[0][0]
-        ball_start_loc = possession_df.iloc[0]['ball']
-        ball_end_loc = possession_df.iloc[catch_idx]['ball']
-        
-        dist_x = round(ball_start_loc[0] - ball_end_loc[0],2)
-        dist_y = round(ball_start_loc[1] - ball_end_loc[1],2)
-    except: #no catch means turnover
-        dist_x = np.nan
-        dist_y = np.nan
-
-    
-    return dist_x, dist_y
 
 
 def travel_dist(locations):
@@ -167,14 +149,6 @@ def get_poss_summary(possession_df, end_idx, event, team):
     num_dribbles, num_dribbles_per_sec = count_event(possession_df, 'DRIBBLE', end_idx, poss_length)
     #get number of passes
     num_passes, num_passes_per_sec = count_event(possession_df, 'PASS', end_idx, poss_length)
-    #get the length of each pass
-    pass_lengths = []
-    passes = np.where(possession_df['eventType'].values == 'PASS')[0]
-    if len(passes) > 0:
-        for i in range(0,num_passes):
-            pass_idx = passes[i]
-            p = pass_length(possession_df, pass_idx)
-            pass_lengths.append(p)
     
     #get the total distance travelled by the ball and its average speed
     
@@ -206,7 +180,8 @@ def get_poss_summary(possession_df, end_idx, event, team):
     outcome = event['OUTCOME']
     outcome_eventmsg = event['OUTCOME MSGTYPE']
     outcome_eventmsgaction = event['OUTCOME MSGACTIONTYPE']
-    summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 'Pass Lengths': pass_lengths, 
+    #'Pass Lengths': pass_lengths, 
+    summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 
                     'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
                     'Off Player Speeds': off_speeds, 'Def Player Distances': def_distances, 'Def Player Speeds': def_speeds,
                     'Trigger': trigger, 'Outcome': outcome, 'OutcomeMSG': outcome_eventmsg, 'OutcomeMSGaction': outcome_eventmsgaction}
@@ -240,9 +215,106 @@ def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, firs
                 trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team))
             else: 
                 trans_summaries.append(get_poss_summary(trans_possessions[i], time_end_indice, events_df.iloc[i], team))
-            
         
     return trans_summaries
     
+
+def get_pass_outcomes(all_poss_summaries):
+    '''
+    from the pass summary data, record the trigger/outcome for each pass to add to the pass analysis dataframe
+    INPUT:
+        - all_poss_summaries, dict: dict containing the summaries of each transition possession, created from get_all_poss_summaries()
+    '''
+    triggers = []
+    outcomes = []
+    outcomes_msg = []
+    outcomes_msgaction = []
+
+    for idx in range (0,len(all_poss_summaries)):
+        n_passes = all_poss_summaries[idx]['# Passes']
+        for jdx in range(0,n_passes):
+            triggers.append(all_poss_summaries[idx]['Trigger'])
+            outcomes.append(all_poss_summaries[idx]['Outcome'])
+            outcomes_msg.append(all_poss_summaries[idx]['OutcomeMSG'])
+            outcomes_msgaction.append(all_poss_summaries[idx]['OutcomeMSGaction'])
+    
+    return triggers, outcomes, outcomes_msg, outcomes_msgaction
+            
+
+    
+def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possessions = True):
+    '''
+    transition stats for a single team from a single game
+    INPUT:
+        - trans_possessions, list of df's: stores df for each transition possession (Transition.trans_possesions)
+        - end_indices, list of ints: indices of the end of each transition possession (where the shot, TO, foul, stoppage, etc occurred)
+        - events_df, df: dataframe containing event info for each transition opportunity
+        - team, str: 'home' or 'away'
+        - first_x_seconds, int, optional: only gather info for first x seconds of transition possession (likely use to look at first 3 seconds)
+        - all_possessions, boolean, default = True: get transition data for ALL transition possessions in the game
+    '''
+    possessions_tracking = trans_object.trans_possessions
+    end_of_possessions = trans_object.end_of_possessions
+    possessions_event = trans_object.event_trans_opp
+    
+    if team == 'home':
+        shooting_directions = trans_object.meta_data['homeDirection']
+        gameId = trans_object.meta_data['id']
+        teamId = trans_object.meta_data['homeTeamId']
+        #teamName = trans_object.meta_data['homeTeamName']
+        #teamId = get_team_id(teamName)
+    else:
+        shooting_directions = trans_object.meta_data['awayDirection']
+        gameId = trans_object.meta_data['id']
+        teamId = trans_object.meta_data['awayTeamId']
+        #teamName = trans_object.meta_data['awayTeamName']
+        #teamId = get_team_id(teamName)
     
     
+  
+    trans_summaries = get_all_poss_summaries(possessions_tracking, end_of_possessions, possessions_event, team, first_x_seconds) 
+    pass_df = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
+    
+    #add the triggers/outcomes to each pass in pass_df
+    triggers, outcomes, outcomes_msg, outcomes_msgaction = get_pass_outcomes(trans_summaries)
+    pass_df['Transition Trigger'] = triggers
+    pass_df['Outcome'] = outcomes
+    pass_df['OutcomeMSG'] = outcomes_msg
+    pass_df['OutcomeMSGaction'] = outcomes_msgaction
+        
+    #convert dictionary to dataframe 
+    trans_summaries_df = pd.DataFrame(trans_summaries)
+    
+    #add team and game info to both dataframes
+    trans_summaries_df['Team Id'] = teamId
+    trans_summaries_df['Game Id'] = gameId
+    pass_df['Team Id'] = teamId
+    pass_df['Game Id'] = gameId
+    
+    
+    return trans_summaries_df, pass_df
+
+def get_all_games_data():
+    transition_objects = []
+    all_poss_summaries = pd.DataFrame()
+    all_pass_stats = pd.DataFrame()
+    idx = 0
+    print('Getting transition data for game:')
+    for gameId in os.listdir('data/games'):
+        print(gameId)
+        for team in ['home', 'away']:
+            transition = Transition(gameId, team)
+            possession_summaries, pass_stats = get_single_game_data(transition, team)
+            transition_objects.append(transition)
+            
+            all_poss_summaries = pd.concat([all_poss_summaries, possession_summaries], ignore_index=True)
+            all_pass_stats = pd.concat([all_pass_stats, pass_stats], ignore_index=True)
+        idx += 1
+    
+    #save the data
+    save_loc = 'data/transition'
+    if os.path.isdir(save_loc) == False:
+        os.mkdir(save_loc)
+
+    all_pass_stats.to_csv(save_loc+'/pass_stats.csv', index=False)
+    all_poss_summaries.to_csv(save_loc + '/possession_summaries.csv', index=False)
