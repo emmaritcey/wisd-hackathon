@@ -112,7 +112,11 @@ class Transition(Game):
             temp_df = trans_poss.iloc[0:end_of_possession+1]
             #check if nothing has happened in the 8 seconds since the change of possession (ball may have gotten lost after made shot, etc)
             #too short to analyze, don't include this possession, delete it from event_trans_opp and don't add it to all_trans_poss
+            
             if end_of_possession <= 2 or ('TMO' in temp_df['eventType'].values) or (trans_poss['eventType'].isnull().sum() >= 198):
+                idx_to_remove.append(index)
+            #if transition opportunity started with a made shot, but no pass was made then ball was not inbounded within 8 seconds of shot
+            elif  row['eventType'] == 'SHOT' and ('PASS' not in trans_poss['eventType'].values):
                 idx_to_remove.append(index)
             else: 
                 all_trans_poss.append(trans_poss)

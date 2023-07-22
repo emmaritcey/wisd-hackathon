@@ -22,8 +22,6 @@ def get_possession_length(possession_df, end_idx):
     start_time = possession_df.iloc[0]['gameClock']
     end_time = possession_df.iloc[end_idx]['gameClock']
     poss_length = round(start_time - end_time,2)
-    if poss_length == 0:
-        print('oh no')
     
     return poss_length
 
@@ -40,7 +38,7 @@ def count_event(possession_df, event_name, end_idx, poss_length):
         n_events: number of dribbles or passes
         n_events_per_sec: number of dribbles or passes per second
     '''
-    possession_df = possession_df.iloc[0:end_idx]
+    possession_df = possession_df.iloc[0:end_idx+1]
     n_events = len(np.where(possession_df['eventType'].values == event_name)[0])
     n_events_per_sec = round(n_events / poss_length, 2)
     
@@ -57,7 +55,7 @@ def get_ball_distances(possession_df, end_idx):
     OUTPUT:
         - ball_dist, int: total distance the ball travelled in feet 
     '''
-    ball_locations = possession_df['ball'].values[0:end_idx]
+    ball_locations = possession_df['ball'].values[0:end_idx+1]
     ball_x = [item[0] for item in ball_locations]
     ball_y = [item[1] for item in ball_locations]
     locations = [ball_x, ball_y]
@@ -219,6 +217,7 @@ def get_poss_outcomes(all_poss_summaries, type):
         col = '# Passes'
     else:
         col = '# Dribbles'
+  
 
     for idx in range (0,len(all_poss_summaries)):
         num = all_poss_summaries[idx][col]
@@ -274,12 +273,10 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     pass_df['OutcomeMSG'] = outcomes_msg
     pass_df['OutcomeMSGaction'] = outcomes_msgaction
     
-    #TODO: FIX SO THAT I CAN ADD THIS INFO TO DRIVE DATA (DOESN'T WORK BECAUSE TRANS_SUMMARIES CONTAINS # OF DRIBBLES, NOT # OF DRIVES)
-    # triggers2, outcomes2, outcomes_msg2, outcomes_msgaction2 = get_poss_outcomes(trans_summaries, 'drive')
-    # drive_df['Transition Trigger'] = triggers2
-    # drive_df['Outcome'] = outcomes2
-    # drive_df['OutcomeMSG'] = outcomes_msg2
-    # drive_df['OutcomeMSGaction'] = outcomes_msgaction2
+    #add the triggers/outcomes to each drive in drive_df
+    #merge with pass_df on transition index to get data since trans_summaries counts # of dribbles, not # of drives
+    temp = pass_df[['Transition Index', 'Outcome', 'OutcomeMSG', 'OutcomeMSGaction']].drop_duplicates(ignore_index=True)
+    drive_df = drive_df.merge(temp, left_on=['Transition Index'], right_on=['Transition Index'], how='left')
         
     #convert dictionary to dataframe 
     trans_summaries_df = pd.DataFrame(trans_summaries)
@@ -327,26 +324,18 @@ def get_all_games_data():
     transition_possessions = pd.DataFrame(transition_possessions)
     
     #save the data
-    save_loc = 'data/transition/test'
+    save_loc = 'data/transition/'
     if os.path.isdir(save_loc) == False:
         os.mkdir(save_loc)
+    
+    all_pass_stats.to_pickle(save_loc+'/pass_stats.pkl')
+    all_drive_stats.to_pickle(save_loc+'/drive_stats.pkl')
+    all_poss_summaries.to_pickle(save_loc+'/possession_summaries.pkl')
+    transition_possessions.to_pickle(save_loc+'/transition_possession.pkl')
 
-    all_pass_stats.to_csv(save_loc+'/pass_stats.csv', index=False)
-    all_drive_stats.to_csv(save_loc+'/drive_stats.csv', index=False)
-    all_poss_summaries.to_csv(save_loc + '/possession_summaries.csv', index=False)
-    transition_possessions.to_csv(save_loc+'/transition_possessions.csv', index=False)
     
-    
-    
-#%%
 def main():
     get_all_games_data()
     
     
 main()
-
-#%%
-team = 'home'
-transition = Transition('0042100306', team)
-       
-# %%
