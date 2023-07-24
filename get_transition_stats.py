@@ -367,7 +367,7 @@ def get_all_games_data():
             transition_possessions.to_pickle(save_loc+'possessions_tracking_data/'+gameId+'_'+team+'.pkl')
             
         idx += 1
-        break
+
     #transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
     #transition_possessions = pd.DataFrame(transition_possessions)
     
