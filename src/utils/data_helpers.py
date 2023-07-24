@@ -267,12 +267,12 @@ def classify_possession(trans_possession):
 
 def get_team_directions(event_pbp_df, tracking_df):
     '''
-    get the event data and tracking data for all defensive rebounds for one team in a game
+    get the direction the team is going
     INPUT:
         - event_pbp_df, DF: all event data from the game merged with the play-by-play data
         - tracking_df, df: all tracking data from the game):
     OUTPUT:
-        - home/away_side1/1: 1 = shooting on positive x side (right), -1 = shooting on negative x side (left)
+        - home/away_side1/2: 1 = shooting on positive x side (right), -1 = shooting on negative x side (left)
     '''
     
     first_shot = event_pbp_df[event_pbp_df['eventType']=='SHOT'].iloc[0]

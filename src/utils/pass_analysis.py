@@ -27,7 +27,7 @@ def num_defenders_overtaken(possession_df, pass_idx, end_idx, shooting_side, tea
         - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
         - pass_idx, int: index of the pass
         - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
-        - shooting_side, str: 'pos' (left side) or 'neg' (right side) --> side that the offensive team is shooting on 
+        - shooting_side, int: 1 (left side) or -1 (right side) --> side that the offensive team is shooting on 
         - team, str: 'home' or 'away'
     '''
     possession_df = possession_df.iloc[pass_idx:end_idx+1]
@@ -96,8 +96,8 @@ def pass_distance(possession_df, pass_idx, end_idx, shooting_side):
         - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
         - pass_idx, int: index of the pass
         - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])   
-        - shooting_side, str: 'pos' (left side) or 'neg' (right side) --> side that the offensive team is shooting on 
-
+        - shooting_side, int: 1 (left side) or -1 (right side) --> side that the offensive team is shooting on 
+        
     OUTPUT:
         - dist_x, int: x distance (up the court)
         - dist_y, int: y distance (across the court)
@@ -173,8 +173,7 @@ def get_possession_passes(possession_df, end_idx, shooting_side, team, event, pa
     INPUT:
         - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
         - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
-        - shooting_side, str: 'pos' (left side) or 'neg' (right side) --> side that the offensive team is shooting on 
-        - team, str: 'home' or 'away'
+        - shooting_side, int: 1 (left side) or -1 (right side) --> side that the offensive team is shooting on         - team, str: 'home' or 'away'
         - event, series: corresponding single event information for the beginning of the transition possession
         - pass_dict, dict: contains data from all passes made in transition up until the trans_idx'th possession
         - trans_idx, int: the transition possession index (first trans poss is 0,...,end_idx)

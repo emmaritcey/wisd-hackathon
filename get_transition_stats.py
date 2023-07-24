@@ -25,6 +25,36 @@ def get_possession_length(possession_df, end_idx):
     
     return poss_length
 
+def time_ball_crossed_half(possession_df, end_idx, shooting_side):
+    '''
+    get the time it takes for the ball to cross half court
+    INPUT:
+        - possession_df, df: contains tracking data of entire single possession
+        - end_idx, str: index of the end of the possession (shot, stoppage, TO, etc)
+        - shooting_side, int: 1 (left side) or -1 (right side) --> side that the offensive team is shooting on 
+    OUTPUT:
+        - elapsed, int: -1 if ball never crossed half
+    '''
+    possession_df = possession_df.iloc[0:end_idx+1]
+    if possession_df['PERIOD'].iloc[0] <= 2:
+        shooting_side = shooting_side[0]
+    else:
+        shooting_side = shooting_side[1]
+    try:
+        ball_locs = possession_df['ball'].values
+        x_locs = np.array([x[0] for x in ball_locs])*shooting_side
+        idx = np.where(x_locs>=0)[0][0]
+
+        start_time = possession_df['gameClock'].iloc[0]
+        end_time = possession_df['gameClock'].iloc[idx]
+
+        elapsed = round(start_time - end_time,2)
+    except:
+        elapsed = -1
+        
+    return elapsed
+    
+
 
 def count_event(possession_df, event_name, end_idx, poss_length):
     '''
@@ -108,7 +138,7 @@ def get_player_distance(player_locs, player_num):
     return dist, playerId
 
 
-def get_poss_summary(possession_df, end_idx, event, team):
+def get_poss_summary(possession_df, end_idx, event, team, shooting_side):
     '''
     Get summary of a single transition possession: 
         - length of possession in seconds
@@ -121,6 +151,8 @@ def get_poss_summary(possession_df, end_idx, event, team):
         - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
         - event, series: corresponding single event information for the beginning of the transition possession
         - team, str: 'home' or 'away'
+        - shooting_side, int: 1 (left side) or -1 (right side) --> side that the offensive team is shooting on 
+        - shooting_side, int: -1 or 1
     OUTPUT:
         - summary_dict, dict: dictionary containing summary of a single transition possession
     
@@ -131,6 +163,8 @@ def get_poss_summary(possession_df, end_idx, event, team):
     num_dribbles, num_dribbles_per_sec = count_event(possession_df, 'DRIBBLE', end_idx, poss_length)
     #get number of passes
     num_passes, num_passes_per_sec = count_event(possession_df, 'PASS', end_idx, poss_length)
+    #get time taken for ball to cross half
+    time_to_half = time_ball_crossed_half(possession_df, end_idx, shooting_side)
     
     #get the total distance travelled by the ball and its average speed
     
@@ -163,7 +197,7 @@ def get_poss_summary(possession_df, end_idx, event, team):
     outcome_eventmsg = event['OUTCOME MSGTYPE']
     outcome_eventmsgaction = event['OUTCOME MSGACTIONTYPE']
     #'Pass Lengths': pass_lengths, 
-    summary_dict = {'Possession Length': poss_length, '# Dribbles': num_dribbles, '# Passes': num_passes, 
+    summary_dict = {'Possession Length': poss_length, 'Time Ball Crosses Half': time_to_half, '# Dribbles': num_dribbles, '# Passes': num_passes, 
                     'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
                     'Off Player Speeds': off_speeds, 'Def Player Distances': def_distances, 'Def Player Speeds': def_speeds,
                     'Trigger': trigger, 'Outcome': outcome, 'OutcomeMSG': outcome_eventmsg, 'OutcomeMSGaction': outcome_eventmsgaction}
@@ -171,7 +205,7 @@ def get_poss_summary(possession_df, end_idx, event, team):
     return summary_dict
 
 
-def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, first_x_seconds = 8):
+def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, shooting_directions, first_x_seconds = 8):
     '''
     create a list of dictionaries containing the summaries of each transition possession
     INPUT:
@@ -179,6 +213,7 @@ def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, firs
         - end_indices, list of ints: indices of the end of each transition possession (where the shot, TO, foul, stoppage, etc occurred)
         - events_df, df: dataframe containing event info for each transition opportunity
         - team, str: 'home' or 'away'
+        - shooting_side, int: 1 (left side) or -1 (right side) --> side that the offensive team is shooting on 
         - first_x_seconds, int, optional: only gather info for first x seconds of transition possession (likely use to look at first 3 seconds)
     OUTPUT:
         - trans_summaries, list of dicts: contains a dictionary for each transition possession which summarizes the possession
@@ -190,13 +225,13 @@ def get_all_poss_summaries(trans_possessions, end_indices, events_df, team, firs
         end_indice = end_indices[i]
         #print(trans_possessions[i])
         if first_x_seconds == 8: #use end_indices[i] as the final frame of the possession
-            trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team))
+            trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team, shooting_directions))
         else: #looking at shorter range of time, say first three seconds of the possession
             time_end_indice = first_x_seconds*25 + 1 #25 frames per second
             if time_end_indice > end_indice: #transition possession ended before the chosen time
-                trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team))
+                trans_summaries.append(get_poss_summary(trans_possessions[i], end_indice, events_df.iloc[i], team, shooting_directions))
             else: 
-                trans_summaries.append(get_poss_summary(trans_possessions[i], time_end_indice, events_df.iloc[i], team))
+                trans_summaries.append(get_poss_summary(trans_possessions[i], time_end_indice, events_df.iloc[i], team, shooting_directions))
         
     return trans_summaries
     
@@ -260,7 +295,7 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     
     
   
-    trans_summaries = get_all_poss_summaries(possessions_tracking, end_of_possessions, possessions_event, team, first_x_seconds) 
+    trans_summaries = get_all_poss_summaries(possessions_tracking, end_of_possessions, possessions_event, team, shooting_directions, first_x_seconds) 
     pass_df = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
     drive_df = get_drive_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
 
@@ -296,9 +331,19 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
 
 
 def get_all_games_data():
-    transition_objects = []
-    gameId_list = []
-    team_list = []
+    
+    #save the data
+    save_loc = 'data/transition/'
+    if os.path.isdir(save_loc) == False:
+        os.mkdir(save_loc)
+    if os.path.isdir(save_loc+'possessions_tracking_data/') == False:
+        os.mkdir(save_loc+'possessions_tracking_data/')
+    
+    
+    
+    #transition_objects = []
+    #gameId_list = []
+    #team_list = []
     all_poss_summaries = pd.DataFrame()
     all_pass_stats = pd.DataFrame()
     all_drive_stats = pd.DataFrame()
@@ -309,27 +354,29 @@ def get_all_games_data():
         for team in ['home', 'away']:
             transition = Transition(gameId, team)
             possession_summaries, pass_stats, drive_stats = get_single_game_data(transition, team)
-            transition_objects.append(transition)
-            gameId_list.append(gameId)
-            team_list.append(team)
+            #transition_objects.append(transition)
+            #gameId_list.append(gameId)
+            #team_list.append(team)
             
             all_poss_summaries = pd.concat([all_poss_summaries, possession_summaries], ignore_index=True)
             all_pass_stats = pd.concat([all_pass_stats, pass_stats], ignore_index=True)
             all_drive_stats = pd.concat([all_drive_stats, drive_stats], ignore_index=True)
+            
+            transition_possessions = {'Transition Object': [transition], 'Game Id': [gameId], 'Team': [team]}
+            transition_possessions = pd.DataFrame(transition_possessions)
+            transition_possessions.to_pickle(save_loc+'possessions_tracking_data/'+gameId+'_'+team+'.pkl')
+            
         idx += 1
+        break
+    #transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
+    #transition_possessions = pd.DataFrame(transition_possessions)
     
-    transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
-    transition_possessions = pd.DataFrame(transition_possessions)
-    
+
     #save the data
-    save_loc = 'data/transition/'
-    if os.path.isdir(save_loc) == False:
-        os.mkdir(save_loc)
-    
     all_pass_stats.to_pickle(save_loc+'/pass_stats.pkl')
     all_drive_stats.to_pickle(save_loc+'/drive_stats.pkl')
     all_poss_summaries.to_pickle(save_loc+'/possession_summaries.pkl')
-    transition_possessions.to_pickle(save_loc+'/transition_possession.pkl')
+    #transition_possessions.to_pickle(save_loc+'/transition_possession.pkl')
 
     
 def main():
