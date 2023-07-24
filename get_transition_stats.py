@@ -108,7 +108,6 @@ def get_player_distance(player_locs, player_num):
     return dist, playerId
 
 
-#TODO: if shot was taken in transition, add the type of shot taken and whether it was made or not
 def get_poss_summary(possession_df, end_idx, event, team):
     '''
     Get summary of a single transition possession: 
@@ -275,7 +274,7 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     
     #add the triggers/outcomes to each drive in drive_df
     #merge with pass_df on transition index to get data since trans_summaries counts # of dribbles, not # of drives
-    temp = pass_df[['Transition Index', 'Outcome', 'OutcomeMSG', 'OutcomeMSGaction']].drop_duplicates(ignore_index=True)
+    temp = pass_df[['Transition Index', 'Transition Trigger', 'Outcome', 'OutcomeMSG', 'OutcomeMSGaction']].drop_duplicates(ignore_index=True)
     drive_df = drive_df.merge(temp, left_on=['Transition Index'], right_on=['Transition Index'], how='left')
         
     #convert dictionary to dataframe 
@@ -296,7 +295,6 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     return trans_summaries_df, pass_df, drive_df
 
 
-#TODO: use pickle to save transition objects (right now just saving as strings which is useless)
 def get_all_games_data():
     transition_objects = []
     gameId_list = []

@@ -6,6 +6,7 @@ import numpy as np
 
 METADATA_PATH = './data/metadata'
 
+#TODO: calculate number of games each team played --> loop through games, have counter for each team
 
 
 #TODO: could change this function so that it returns meta data for a game --> function input is the game id of the game we want the meta data for
