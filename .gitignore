@@ -1,6 +1,7 @@
 .env
 testing.ipynb
 visualizations.ipynb
+model_testing.ipynb
 thoughts.txt
 sportradar-wisd_accessKeys.csv
 sportradar-wisd-data-access-instructions.txt
