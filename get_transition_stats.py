@@ -2,13 +2,12 @@ import pandas as pd
 import numpy as np
 import os
 from src.utils.pass_analysis import get_pass_data
-from src.utils.data_helpers import get_team_name, travel_dist
+from src.utils.data_helpers import get_team_name, travel_dist, get_game_title
 from src.utils.drive_analysis import get_drive_data
 
 from Transition import Transition
 
 
-#TODO: what time did the ball cross half at? (time elapsed to cross half)
 
 def get_possession_length(possession_df, end_idx):
     '''
@@ -265,7 +264,7 @@ def get_poss_outcomes(all_poss_summaries, type):
             
 
     
-def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possessions = True):
+def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all_possessions = True):
     '''
     transition stats for a single team from a single game
     INPUT:
@@ -283,12 +282,14 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     if team == 'home':
         shooting_directions = trans_object.meta_data['homeDirection']
         gameId = trans_object.meta_data['id']
+        nba_gameId = trans_object.meta_data['nbaId']
         teamId = trans_object.meta_data['homeTeamId']
         #teamName = trans_object.meta_data['homeTeamName']
         #teamId = get_team_id(teamName)
     else:
         shooting_directions = trans_object.meta_data['awayDirection']
         gameId = trans_object.meta_data['id']
+        nba_gameId = trans_object.meta_data['nbaId']
         teamId = trans_object.meta_data['awayTeamId']
         #teamName = trans_object.meta_data['awayTeamName']
         #teamId = get_team_id(teamName)
@@ -296,7 +297,7 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     
   
     trans_summaries = get_all_poss_summaries(possessions_tracking, end_of_possessions, possessions_event, team, shooting_directions, first_x_seconds) 
-    pass_df = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
+    pass_df, trans_idx = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team, trans_idx)
     drive_df = get_drive_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
 
     
@@ -315,19 +316,26 @@ def get_single_game_data(trans_object, team, first_x_seconds = 8, all_possession
     #convert dictionary to dataframe 
     trans_summaries_df = pd.DataFrame(trans_summaries)
     
+    game_title = get_game_title(nba_gameId)
     #add team and game info to both dataframes
     trans_summaries_df['Team Id'] = teamId
     trans_summaries_df['Team Name'] = get_team_name(teamId)
+    trans_summaries_df['NBA Game Id'] = nba_gameId
     trans_summaries_df['Game Id'] = gameId
+    trans_summaries_df['Game Title'] = game_title
     pass_df['Team Id'] = teamId
     pass_df['Team Name'] = get_team_name(teamId)
+    pass_df['NBA Game Id'] = nba_gameId
     pass_df['Game Id'] = gameId
+    pass_df['Game Title'] = game_title
     drive_df['Team Id'] = teamId
     drive_df['Team Name'] = get_team_name(teamId)
+    drive_df['NBA Game Id'] = nba_gameId
     drive_df['Game Id'] = gameId
+    drive_df['Game Title'] = game_title
     
     
-    return trans_summaries_df, pass_df, drive_df
+    return trans_summaries_df, pass_df, drive_df, trans_idx
 
 
 def get_all_games_data():
@@ -347,13 +355,13 @@ def get_all_games_data():
     all_poss_summaries = pd.DataFrame()
     all_pass_stats = pd.DataFrame()
     all_drive_stats = pd.DataFrame()
-    idx = 0
+    trans_idx = 0
     print('Getting transition data for game:')
     for gameId in os.listdir('data/games'):
         print(gameId)
         for team in ['home', 'away']:
             transition = Transition(gameId, team)
-            possession_summaries, pass_stats, drive_stats = get_single_game_data(transition, team)
+            possession_summaries, pass_stats, drive_stats, trans_idx = get_single_game_data(transition, team, trans_idx)
             #transition_objects.append(transition)
             #gameId_list.append(gameId)
             #team_list.append(team)
@@ -365,8 +373,7 @@ def get_all_games_data():
             transition_possessions = {'Transition Object': [transition], 'Game Id': [gameId], 'Team': [team]}
             transition_possessions = pd.DataFrame(transition_possessions)
             transition_possessions.to_pickle(save_loc+'possessions_tracking_data/'+gameId+'_'+team+'.pkl')
-            
-        idx += 1
+ 
 
     #transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
     #transition_possessions = pd.DataFrame(transition_possessions)
