@@ -78,3 +78,5 @@ def make_fig(ax=None, color="gray", lw=1, zorder=0, cc_x=0, cc_y=0):
     # Add the court elements onto the axes
     for element in court_elements:
         ax.add_patch(element)
+        
+    return ax

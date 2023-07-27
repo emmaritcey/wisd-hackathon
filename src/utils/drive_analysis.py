@@ -122,7 +122,7 @@ def distance_dribbled_discrete(possession_df, start_end_indices, shooting_side):
     dist_y = round(end_loc[1] - start_loc[1],2)
     dist = round(math.dist(start_loc[0:2], end_loc[0:2]), 2)
     
-    return dist_x, dist_y, dist
+    return dist_x, dist_y, dist, start_loc, end_loc
     
     
 def num_defenders_overtaken(possession_df, start_end_indices, shooting_side, team):
@@ -250,15 +250,21 @@ def get_possession_drives(possession_df, end_idx, shooting_side, team, event, dr
     for idx in range(0, len(drive_indices)):
         drive_idx = drive_indices[idx]
         time_to_drive, length_of_drive_seconds = time_of_drive(possession_df, drive_idx)
-        distances_discrete = distance_dribbled_discrete(possession_df, drive_idx, shooting_side)
-        distances_total = distance_dribbled_total(possession_df, drive_idx)
+        dist_x, dist_y, distance, start_loc, end_loc = distance_dribbled_discrete(possession_df, drive_idx, shooting_side)
+        total_dist_x, total_dist_y, total_distance = distance_dribbled_total(possession_df, drive_idx)
         ground_made_up, num_def_passed = num_defenders_overtaken(possession_df, drive_idx, shooting_side, team)
         playerName = get_driver(possession_df, drive_idx, team)
         drive_dict['Drive Indices'].append(drive_idx)
         drive_dict['Drive Time'].append(time_to_drive)
         drive_dict['Drive Length (sec)'].append(length_of_drive_seconds)
-        drive_dict['Drive Distance'].append(distances_discrete)
-        drive_dict['Drive Distance Total'].append(distances_total)
+        drive_dict['Drive Distance X'].append(dist_x)
+        drive_dict['Drive Distance Y'].append(dist_y)
+        drive_dict['Drive Distance'].append(distance)
+        drive_dict['Drive Start'].append(start_loc)
+        drive_dict['Drive End'].append(end_loc)
+        drive_dict['Total Drive Distance X'].append(total_dist_x)
+        drive_dict['Total Drive Distance Y'].append(total_dist_y)
+        drive_dict['Total Drive Distance'].append(total_distance)
         drive_dict['Ground Made Up'].append(ground_made_up)
         drive_dict['# Defenders Passed'].append(num_def_passed)
         drive_dict['Driver'].append(playerName)
@@ -267,7 +273,7 @@ def get_possession_drives(possession_df, end_idx, shooting_side, team, event, dr
     return drive_dict
 
 
-def get_drive_data(trans_possessions, end_indices, events_df, shooting_directions, team):
+def get_drive_data(trans_possessions, end_indices, events_df, shooting_directions, team, trans_idx):
     '''
     get information on all passes from all transition possessions
     INPUT:
@@ -276,6 +282,7 @@ def get_drive_data(trans_possessions, end_indices, events_df, shooting_direction
         - events_df, df: dataframe containing event info for each transition opportunity
         - shooting_directions, 2d tuple: contains 1 (right side) or -1 (left side) first # is direction in first half, second is direction in second half
         - team, str: 'home' or 'away'    
+        - trans_idx, int: represents the ith transition possession out of all the data
     OUTPUT:
         - drive_dict, dict: contains data from all passes made in transition (all possessions)
 
@@ -286,8 +293,10 @@ def get_drive_data(trans_possessions, end_indices, events_df, shooting_direction
     #ground made up --> ground the ball made up on each defender from the pass (if 2 feet behind defender and then 1 foot behind defender after pass, then it would be 1 for that defender)
     #defenders passed --> number of defenders the ball passed in the air
     #transition index --> the transition possession the pass occurred in (to be able to map it back to its tracking and event data)
-    drive_dict = {'Drive Indices': [], 'Drive Time': [], 'Drive Length (sec)': [], 'Drive Distance': [], 'Drive Distance Total': [], 
-                  'Ground Made Up': [], '# Defenders Passed': [], 'Driver': [], 'Transition Index': []}
+    drive_dict = {'Drive Indices': [], 'Drive Time': [], 'Drive Length (sec)': [], 'Drive Distance X': [], 'Drive Distance Y': [], 
+                  'Drive Distance': [], 'Drive Start': [], 'Drive End': [], 'Drive Distance': [], 'Total Drive Distance X': [], 
+                  'Total Drive Distance Y': [], 'Total Drive Distance': [], 'Ground Made Up': [], '# Defenders Passed': [], 
+                  'Driver': [], 'Transition Index': []}
     
     for idx in range(0, len(trans_possessions)):
         event = events_df.iloc[idx]
@@ -296,10 +305,10 @@ def get_drive_data(trans_possessions, end_indices, events_df, shooting_direction
         else:
             shooting_direction = shooting_directions[1]
             
-        pass_dict = get_possession_drives(trans_possessions[idx], end_indices[idx], shooting_direction, team, events_df.iloc[idx], drive_dict, idx)
+        pass_dict = get_possession_drives(trans_possessions[idx], end_indices[idx], shooting_direction, team, events_df.iloc[idx], drive_dict, trans_idx+idx)
         
         
     pass_df = pd.DataFrame(pass_dict)
-    return pass_df
+    return pass_df, trans_idx+len(trans_possessions)
     
 

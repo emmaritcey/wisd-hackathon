@@ -8,6 +8,18 @@ METADATA_PATH = './data/metadata'
 
 #TODO: calculate number of games each team played --> loop through games, have counter for each team
 
+def get_game_title(nba_gameId):
+    dict = {'0042100301': 'Miami vs Boston Game 1', '0042100302': 'Miami vs Boston Game 2','0042100303': 'Miami vs Boston Game 3', 
+            '0042100304': 'Miami vs Boston Game 4', '0042100305': 'Miami vs Boston Game 5', '0042100306': 'Miami vs Boston Game 6',
+            '0042100307': 'Miami vs Boston Game 7', '0042100311': 'Golden State vs Dallas Game 1', '0042100312': 'Golden State vs Dallas Game 2',
+            '0042100313': 'Golden State vs Dallas Game 3', '0042100314': 'Golden State vs Dallas Game 4', '0042100315': 'Golden State vs Dallas Game 5',
+            '0042100401': 'Golden State vs Boston Game 1', '0042100402': 'Golden State vs Boston Game 2', '0042100403': 'Golden State vs Boston Game 3', 
+            '0042100404': 'Golden State vs Boston Game 4', '0042100405': 'Golden State vs Boston Game 5', '0042100406': 'Golden State vs Boston Game 6'}
+
+    game_title = [dict[x] for x in dict.keys() if x == nba_gameId][0]
+    return game_title
+
+
 
 #TODO: could change this function so that it returns meta data for a game --> function input is the game id of the game we want the meta data for
 def get_game_meta_data():

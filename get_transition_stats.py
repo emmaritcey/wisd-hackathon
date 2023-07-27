@@ -74,6 +74,47 @@ def count_event(possession_df, event_name, end_idx, poss_length):
     return n_events, n_events_per_sec
 
 
+def count_drives(possession_df, end_idx, trigger_event):
+    '''
+    get a list of tuples containing the start and end index for each drive/dribbling sequence in a possession
+    defining a drive/dribbling sequence as one started by a touch (or start of possession) and ending with a pass or shot
+    if the possession is starting off a made shot, don't look for dribbles until after first pass (inbound pass) is made
+    INPUT:
+        - possession_df: a single dataframe from Transition.trans_possessions (Transition.trans_possesions[idx]) - contains tracking and event info
+        - end_idx, int: index of the end of the transition possession (Transition.end_of_possessions[idx])
+        - trigger_event, series: event data for the event that started the transition possession (shot, TO, etc)
+    OUTPUT:
+        - drive_start_stops, list of tuples: for each tuple --> (start_idx, end_idx) of a drive/dribbling sequence
+    '''
+    
+    if trigger_event['eventType'] == 'SHOT': #start search from inbound pass
+        try:
+            zero_idx = list(possession_df[possession_df['eventType']=='PASS'].index)[0]
+        except:
+            print('oh no')
+        temp_df = possession_df.iloc[zero_idx:end_idx+1]
+    else:
+        zero_idx = 0
+        temp_df = possession_df.iloc[zero_idx:end_idx+1]
+    dribble_indices = list(temp_df[temp_df['eventType']=='DRIBBLE'].index) #get list of indices of each dribble
+    
+    dribble_start_stops = []
+    for idx in dribble_indices:
+        start_idx = idx
+        stop_idx = idx
+        while start_idx > zero_idx and possession_df['eventType'].iloc[start_idx] != 'TOUCH':
+            start_idx -= 1
+        while stop_idx < end_idx and possession_df['eventType'].iloc[stop_idx] != 'PASS' and possession_df['eventType'].iloc[stop_idx] != 'SHOT':
+            stop_idx += 1
+        dribble_start_stops.append((start_idx, stop_idx))
+
+    num_drives = len(list(set(dribble_start_stops)))
+ 
+    return num_drives
+
+
+
+
 def get_ball_distances(possession_df, end_idx):
     '''
     get the total distance the ball has travelled by calling travel_dist on the ball locations
@@ -162,6 +203,8 @@ def get_poss_summary(possession_df, end_idx, event, team, shooting_side):
     num_dribbles, num_dribbles_per_sec = count_event(possession_df, 'DRIBBLE', end_idx, poss_length)
     #get number of passes
     num_passes, num_passes_per_sec = count_event(possession_df, 'PASS', end_idx, poss_length)
+    #get number of drives
+    num_drives = count_drives(possession_df, end_idx, event)
     #get time taken for ball to cross half
     time_to_half = time_ball_crossed_half(possession_df, end_idx, shooting_side)
     
@@ -196,8 +239,8 @@ def get_poss_summary(possession_df, end_idx, event, team, shooting_side):
     outcome_eventmsg = event['OUTCOME MSGTYPE']
     outcome_eventmsgaction = event['OUTCOME MSGACTIONTYPE']
     #'Pass Lengths': pass_lengths, 
-    summary_dict = {'Possession Length': poss_length, 'Time Ball Crosses Half': time_to_half, '# Dribbles': num_dribbles, '# Passes': num_passes, 
-                    'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
+    summary_dict = {'Possession Length': poss_length, 'Time Ball Crosses Half': time_to_half, '# Dribbles': num_dribbles, '# Drives': num_drives, 
+                    '# Passes': num_passes, 'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
                     'Off Player Speeds': off_speeds, 'Def Player Distances': def_distances, 'Def Player Speeds': def_speeds,
                     'Trigger': trigger, 'Outcome': outcome, 'OutcomeMSG': outcome_eventmsg, 'OutcomeMSGaction': outcome_eventmsgaction}
     
@@ -249,7 +292,7 @@ def get_poss_outcomes(all_poss_summaries, type):
     if type == 'pass':
         col = '# Passes'
     else:
-        col = '# Dribbles'
+        col = '# Drives'
   
 
     for idx in range (0,len(all_poss_summaries)):
@@ -281,25 +324,23 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
     
     if team == 'home':
         shooting_directions = trans_object.meta_data['homeDirection']
-        gameId = trans_object.meta_data['id']
-        nba_gameId = trans_object.meta_data['nbaId']
         teamId = trans_object.meta_data['homeTeamId']
         #teamName = trans_object.meta_data['homeTeamName']
         #teamId = get_team_id(teamName)
     else:
         shooting_directions = trans_object.meta_data['awayDirection']
-        gameId = trans_object.meta_data['id']
-        nba_gameId = trans_object.meta_data['nbaId']
+ 
         teamId = trans_object.meta_data['awayTeamId']
         #teamName = trans_object.meta_data['awayTeamName']
         #teamId = get_team_id(teamName)
-    
+    gameId = trans_object.meta_data['id']
+    nba_gameId = trans_object.meta_data['nbaId']
+    series = trans_object.meta_data['series']
     
   
     trans_summaries = get_all_poss_summaries(possessions_tracking, end_of_possessions, possessions_event, team, shooting_directions, first_x_seconds) 
-    pass_df, trans_idx = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team, trans_idx)
-    drive_df = get_drive_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team)
-
+    pass_df = get_pass_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team, trans_idx)
+    drive_df, trans_idx = get_drive_data(possessions_tracking, end_of_possessions, possessions_event, shooting_directions, team, trans_idx)
     
     #add the triggers/outcomes to each pass in pass_df
     triggers, outcomes, outcomes_msg, outcomes_msgaction = get_poss_outcomes(trans_summaries, 'pass')
@@ -309,9 +350,16 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
     pass_df['OutcomeMSGaction'] = outcomes_msgaction
     
     #add the triggers/outcomes to each drive in drive_df
+    triggers, outcomes, outcomes_msg, outcomes_msgaction = get_poss_outcomes(trans_summaries, 'drive')
+    drive_df['Transition Trigger'] = triggers
+    drive_df['Outcome'] = outcomes
+    drive_df['OutcomeMSG'] = outcomes_msg
+    drive_df['OutcomeMSGaction'] = outcomes_msgaction
+    
+    #add the triggers/outcomes to each drive in drive_df
     #merge with pass_df on transition index to get data since trans_summaries counts # of dribbles, not # of drives
-    temp = pass_df[['Transition Index', 'Transition Trigger', 'Outcome', 'OutcomeMSG', 'OutcomeMSGaction']].drop_duplicates(ignore_index=True)
-    drive_df = drive_df.merge(temp, left_on=['Transition Index'], right_on=['Transition Index'], how='left')
+    #temp = pass_df[['Transition Index', 'Transition Trigger', 'Outcome', 'OutcomeMSG', 'OutcomeMSGaction']].drop_duplicates(ignore_index=True)
+    #drive_df = drive_df.merge(temp, left_on=['Transition Index'], right_on=['Transition Index'], how='left')
         
     #convert dictionary to dataframe 
     trans_summaries_df = pd.DataFrame(trans_summaries)
@@ -323,16 +371,19 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
     trans_summaries_df['NBA Game Id'] = nba_gameId
     trans_summaries_df['Game Id'] = gameId
     trans_summaries_df['Game Title'] = game_title
+    trans_summaries_df['Series'] = series
     pass_df['Team Id'] = teamId
     pass_df['Team Name'] = get_team_name(teamId)
     pass_df['NBA Game Id'] = nba_gameId
     pass_df['Game Id'] = gameId
     pass_df['Game Title'] = game_title
+    pass_df['Series'] = series
     drive_df['Team Id'] = teamId
     drive_df['Team Name'] = get_team_name(teamId)
     drive_df['NBA Game Id'] = nba_gameId
     drive_df['Game Id'] = gameId
     drive_df['Game Title'] = game_title
+    drive_df['Series'] = series
     
     
     return trans_summaries_df, pass_df, drive_df, trans_idx
@@ -373,7 +424,7 @@ def get_all_games_data():
             transition_possessions = {'Transition Object': [transition], 'Game Id': [gameId], 'Team': [team]}
             transition_possessions = pd.DataFrame(transition_possessions)
             transition_possessions.to_pickle(save_loc+'possessions_tracking_data/'+gameId+'_'+team+'.pkl')
- 
+  
 
     #transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
     #transition_possessions = pd.DataFrame(transition_possessions)

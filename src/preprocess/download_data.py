@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
-#TODO: double check if this works
 
 def download_s3_bucket(bucket_name, keys):
     

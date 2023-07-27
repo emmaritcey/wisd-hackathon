@@ -54,5 +54,12 @@ class Game:
         home_direction1, home_direction2, away_direction1, away_direction2 = get_team_directions(event_pbp_df, tracking_df)
         game_md['homeDirection'] = (home_direction1, home_direction2)
         game_md['awayDirection'] = (away_direction1, away_direction2)
+        
+        if game_id[0:-1] == '004210030':
+            game_md['series'] = 'ECF'
+        elif game_id[0:-1] == '004210031':
+            game_md['series'] = 'WCF'
+        else:
+            game_md['series'] = 'Finals'
 
         return game_md
