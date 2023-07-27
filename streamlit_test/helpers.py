@@ -13,10 +13,13 @@ def load_data(file):
     data_load_state.text('')
     return df
 
-def add_selectbox(df, columnName, label):
+def add_selectbox(df, columnName, label, sidebar=True):
     # Add a selectbox to the sidebar:
     options = np.append(['All'], sorted(df[columnName].unique()))
-    selection = st.sidebar.selectbox(label, options, index=0)
+    if sidebar:
+        selection = st.sidebar.selectbox(label, options, index=0)
+    else:
+        selection = st.selectbox(label, options, index=0)
     return selection
 
 def update_df(df, selection, columnName):
@@ -28,13 +31,21 @@ def update_df(df, selection, columnName):
     
     return data
 
-def create_selectbox(df, col, label):
-    selection = add_selectbox(df, col, label)
+def create_selectbox(df, col, label, sidebar=True):
+    selection = add_selectbox(df, col, label, sidebar)
     data = update_df(df, selection, col)
     return selection, data
 
 def get_num_games(df):
     games_by_team = df.groupby(['Team Name'])['Game Id'].unique()
+    num_games = {}
+    for team in games_by_team.index:
+        num_games[team] = len(games_by_team[team])
+        
+    return num_games
+
+def get_num_games_player(df, col):
+    games_by_team = df.groupby([col])['Game Id'].unique()
     num_games = {}
     for team in games_by_team.index:
         num_games[team] = len(games_by_team[team])
@@ -51,3 +62,28 @@ def add_num_games(df, num_games):
     df.drop(['Team'], axis=1, inplace=True)
     
     return df
+
+
+def get_ppp(df):
+    #assume each free throw opportunity ended in 1.5 points (75% free throw average estimate)
+    made_shots = df[df['OutcomeMSG'] == 1]
+    points3 = len(made_shots[made_shots['OutcomeMSGaction'].isin([1,79])])*3 
+    points2 = len(made_shots[~made_shots['OutcomeMSGaction'].isin([1,79])])*2
+    freethrows = len(df[df['OutcomeMSG']==6])*1.5
+    try:
+        ppp = round((points3 + points2 + freethrows) / len(df),2)
+    except ZeroDivisionError:
+        ppp = np.nan
+    
+    return ppp
+
+def get_ppp_df(df, min_val, max_val, col):
+    ppp_dict = {}
+    for team in np.unique(df['Team Name'].values):
+        team_df = df[df['Team Name'] == team]
+        ppp_dict[team] = []
+        for def_passed in range(min_val,max_val):
+            curr_data = team_df[team_df[col] >= def_passed]
+            ppp_dict[team].append(get_ppp(curr_data))
+    return pd.DataFrame.from_dict(ppp_dict)
+
