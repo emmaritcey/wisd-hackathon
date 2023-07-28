@@ -62,7 +62,7 @@ def time_of_drive(possession_df, start_end_indices):
     start_time = possession_df['gameClock'].iloc[start_idx]
     end_time = possession_df['gameClock'].iloc[end_idx]
     
-    length = round(start_time - end_time)
+    length = round(start_time - end_time,2)
     time_to_drive = start_idx / 25 #seconds since possession was obtained to the start of the drive (shot clock isn't always reliable)
     
     return time_to_drive, length
