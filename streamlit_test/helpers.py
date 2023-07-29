@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+from sklearn.preprocessing import minmax_scale
 
 #update this/advance it later if needed
 @st.cache_data
@@ -91,3 +92,25 @@ def get_ppp_df(df, min_val, max_val, col):
             ppp_dict[team].append(get_ppp(curr_data))
     return pd.DataFrame.from_dict(ppp_dict)
 
+def get_ppp_player_df(df, group_by_col):
+    players = []
+    ppp_list = []
+    team_list = []
+    for player in np.unique(df[group_by_col].values):
+        group_df = df[df[group_by_col] == player]
+        players.append(player)
+        ppp_list.append(get_ppp(group_df))
+        team_list.append(group_df.iloc[0]['Team Name'])
+        #ppp_dict[player] = [get_ppp(group_df)]
+    return pd.DataFrame({'Player': players, 'Points per Possession': ppp_list, 'Team': team_list})
+
+#for placing text in multiple positions on scatter plot to reduce overlap
+def improve_text_position(x):
+    """ it is more efficient if the x values are sorted """
+    # fix indentation 
+    positions = ['bottom center', 'top center']  # you can add more: left center ...
+    return [positions[i % len(positions)] for i in range(len(x))]
+
+
+def scale_range(data, min_val, max_val):
+    return minmax_scale(data, (min_val, max_val))
