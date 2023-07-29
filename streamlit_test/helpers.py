@@ -70,10 +70,11 @@ def get_ppp(df):
     points3 = len(made_shots[made_shots['OutcomeMSGaction'].isin([1,79])])*3 
     points2 = len(made_shots[~made_shots['OutcomeMSGaction'].isin([1,79])])*2
     freethrows = len(df[df['OutcomeMSG']==6])*1.5
+    num_possessions = len(np.unique(df['Transition Index'].values))
     try:
-        ppp = round((points3 + points2 + freethrows) / len(df),2)
+        ppp = round((points3 + points2 + freethrows) / num_possessions, 2) #len(df),2)
     except ZeroDivisionError:
-        ppp = np.nan
+        ppp = 0
     
     return ppp
 
@@ -83,7 +84,10 @@ def get_ppp_df(df, min_val, max_val, col):
         team_df = df[df['Team Name'] == team]
         ppp_dict[team] = []
         for def_passed in range(min_val,max_val):
-            curr_data = team_df[team_df[col] >= def_passed]
+            if col == '# Defenders Passed':
+                curr_data = team_df[team_df[col] == def_passed]
+            else:
+                curr_data = team_df[team_df[col] >= def_passed]
             ppp_dict[team].append(get_ppp(curr_data))
     return pd.DataFrame.from_dict(ppp_dict)
 

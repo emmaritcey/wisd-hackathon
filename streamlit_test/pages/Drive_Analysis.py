@@ -11,7 +11,6 @@ from src.visualization.draw_court import make_fig
 from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_num_games_player
 st.set_page_config(layout="wide")
 
-st.title('NBA Transition Tendencies: Driving')
 
 
 def create_sidebar(df):
@@ -37,36 +36,28 @@ def display1(data, possessions_df, selections):
     #hist_vals, bin_edges = np.histogram(df['# Defenders Passed'].values, bins=np.arange(-1,7))
     # fig = px.histogram(data, x="# Defenders Passed")
     # st.write(fig)
+    st.header('Overview of Drives')
+    st.markdown('- Passes that belong to possessions that ended in a :red[**MADE SHOT**] within the first 8 seconds of the shot clock are represented by :red[**RED**] arrows')
+    st.markdown('- Passes that belong to possessions that ended in a :blue[**MISSED SHOT**] within the first 8 seconds of the shot clock are represented by :blue[**BLUE**] arrows')
+    st.markdown('- Passes that belong to possessions that ended in **NO SHOT** within the first 8 seconds of the shot clock are represented by **WHITE** arrows')
+    
     col1, col2 = st.columns([1,3])
     
     with col1:
         show_drives = st.checkbox('Show Drives')
         if show_drives:
-            st.subheader('Displaying Drives for:')
-            team_selection, data = create_selectbox(data, 'Team Name', 'Team:', False)
-            
-            # col1_2, col2_2 = st.columns(2)
-            # with col1_2:
-            #NUMBER INCREMENTS
-            #minimum # of passes in a possession
-            # num_drives = st.number_input('Number of Drives in the Possession', min_value=1, max_value=max(possessions_df['# Drives'].values), step=1)
-            # indices = possessions_df[possessions_df['# Drives']==num_drives].index.values
-            # data = data[data['Transition Index'].isin(indices)]
-            # with col2_2:
-            #     #minimum # of defenders passed on a drive
-            #     def_passed = st.number_input('Number of Defenders the Ball Passed', min_value=0, max_value=5, step=1)
-            #     data = data[data['# Defenders Passed'] == def_passed]
+            st.markdown('##### Displaying Drives for:')
+            _, data = create_selectbox(data, 'Team Name', 'Team:', False)
                 
             col1_2, col2_2 = st.columns(2)
             with col1_2:
                 #Number Increments
-                #minimum # of passes in a possession
-                options = np.append(['Any'], sorted(possessions_df['# Drives'].unique())[1:])
+                #minimum # of drives in a possession
+                options = np.append(['At least 1'], sorted(possessions_df['# Drives'].unique())[1:])
                 num_drives = st.selectbox('Number of Drives in the Possession', options, index=0)
-                if num_drives != 'Any':
+                if num_drives != 'At least 1':
                     indices = possessions_df[possessions_df['# Drives'] == int(num_drives)].index.values
                     data = data[data['Transition Index'].isin(indices)]
-            #data   
             with col2_2:
                 #minimum # of defenders passed on a pass
                 options = np.append(['Any'], np.arange(0,6))
@@ -74,32 +65,27 @@ def display1(data, possessions_df, selections):
                 #min_def_passed = st.number_input('Min # of Defenders the Ball Passed', min_value=0, max_value=5, step=1)
                 if def_passed != 'Any':
                     data = data[data['# Defenders Passed'] == int(def_passed)]
-                
-                
-                
+     
             #Sliders
             #minimum drive distance:
-            min_drive_dist = st.slider('Minimum Drive Distance')
+            min_drive_dist = st.slider('Minimum Drive Distance', key='min dist 2')
             data = data[data['Drive Distance'] >= min_drive_dist]
             
-            st.text('Series: ' + selections['Series'])
-            st.text('Game: ' + selections['Game'])
-            st.text('Player: ' + selections['Driver'])
-            st.text('Transition initiated by: ' + selections['Trigger'])
-            st.text('Outcome: ' + selections['Outcome'])
+            st.markdown('Series: ' + selections['Series'])
+            st.markdown('Game: ' + selections['Game'])
+            st.markdown('Player: ' + selections['Driver'])
+            st.markdown('Transition initiated by: ' + selections['Trigger'])
+            st.markdown('Outcome: ' + selections['Outcome'])
 
     with col2:
+        plt.style.use('dark_background')
         fig2 = plt.figure(figsize=(12, 7))
 
         center_coord_x = 0
         center_coord_y = 0
         ax = make_fig(cc_x=center_coord_x, cc_y=center_coord_y)
-        #plt.scatter(x_locs, y_locs, c=temp_df['shotClock'],
-        #            cmap=plt.cm.Blues, s=100, zorder=1)
-
         plt.xlim(center_coord_x-50, center_coord_x+50)
         plt.ylim(center_coord_y-30, center_coord_y+30)
-        #plt.show()
 
         #TODO: write code to connect pass_df rows to event/tracking data in possessions_tracking_data
         #TODO: add a link to corresponding event video if possible
@@ -113,42 +99,55 @@ def display1(data, possessions_df, selections):
                     dx = data['Drive End'].loc[idx][0] - x
                     dy = data['Drive End'].loc[idx][1] - y
                     if np.isnan(data['OutcomeMSG'].loc[idx]):
-                        c = 'k'
+                        c = 'w'
                     elif data['OutcomeMSG'].loc[idx] == 1 or data['OutcomeMSG'].loc[idx] == 6:
                         c = 'r'
                     else:
-                        c = 'b'
+                        c = '#1f77b4'
                     plt.arrow(x,y,dx,dy, head_width=1, color=c)
                 except:
                     x = data['Drive Start'].loc[idx][0]
                     y = data['Drive Start'].loc[idx][1]
                     plt.plot(x,y,'ro')      
-        
+        ax.set_xticks([])
+        ax.set_yticks([])
         st.pyplot(fig2)  
     return data
     
+    
+#TOD0: add shooting percentage for when a shot IS taken
 def display2(data):
     st.subheader('Stats For Current Selection')
-    ave_dist = round(sum(data['Drive Distance'].values)/len(data['Drive Distance']),2) 
-    
+    num_drives = len(data)
+    try:
+        ave_dist = round(sum(data['Drive Distance'].values)/num_drives,2) 
+    except ZeroDivisionError:
+        ave_dist = '-'
+        
     #assume each free throw opportunity ended in 1.5 points (75% free throw average estimate)
     ppp = get_ppp(data)
-    
-    num_possessions = len(data)
-    num_shots = len(data[data['OutcomeMSG'].isin([1,2,79])])
-    perc_shots = round(num_shots / num_possessions, 2)
-    
+    num_possessions = len(np.unique(data['Transition Index'].values))
+    shots_data = data[data['OutcomeMSG'].isin([1,2,6])]
+    num_shots = len(np.unique(shots_data['Transition Index'].values))
+    try:
+        perc_shots = num_shots / num_possessions
+        perc_shots = str(round(perc_shots*100,1)) + '%'
+    except ZeroDivisionError:
+        perc_shots = '-'
+
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric('Average Drive Distance', ave_dist)
     with col2:
         st.metric('Number of Possessions', num_possessions)
     with col3:
-        st.metric('Points per possession', ppp)
+        st.metric('Points per possession*', ppp)
     with col4:
         st.metric('Number of Shots', num_shots)
     with col5:
-        st.metric('% of Possessions Ending in a Shot', str(round(perc_shots*100,1))+'%')
+        st.metric('% of Possessions Ending in a Shot', perc_shots)
+    st.markdown("*When possessions that did not end in a transition shot are included, PPP will be uncharacteristically low as these possessions would be considered 0 points")
+
 
 
 def display3(data, original_data):
@@ -158,34 +157,32 @@ def display3(data, original_data):
     with col1:
         button1 = st.button('Show Defenders Passed Charts')
     with col2:
-        button2 = st.button('Show Ponts Per Possession Charts')
+        button2 = st.button('Show Points Per Possession Charts')
     
     def_passed_means_team = data.groupby(['Team Name'])['# Defenders Passed'].mean()
     def_passed_sums_team = data.groupby(['Team Name'])['# Defenders Passed'].sum()
     num_drives_team = data.groupby(['Team Name'])['# Defenders Passed'].count()
-    num_games = get_num_games(data)
+    num_games = get_num_games(original_data)
     
     if button1:
         col1, col2 = st.columns(2)
         with col1:
             fig = px.bar(x = def_passed_means_team.index, y = def_passed_means_team.values)
-            fig.update_layout(width=750, height=500,  
+            fig.update_layout(width=600, height=500,  
                             title='Mean Defenders Passed on Transition Drives', title_x=0.3,
-                            xaxis_title="Team") #template='plotly_dark',
-            #fig.update_traces(marker=dict(size=10))
-            #fig.update_yaxes(range=[min(def_passed_means_team)-0.02, max(def_passed_means_team)+0.01])
+                            xaxis_title="Team",
+                            yaxis_title="") #template='plotly_dark',
             st.plotly_chart(fig)
         
         with col2:
-            num_games = get_num_games(original_data)
+            #num_games = get_num_games(original_data)
             num_def_passed_per_game = [def_passed_sums_team[x]/num_games[x] for x in def_passed_sums_team.index]
             
             fig = px.bar(x = def_passed_sums_team.index, y = num_def_passed_per_game)
-            fig.update_layout(width=750, height=500,  
+            fig.update_layout(width=600, height=500,  
                             title='# of Defenders Passed on Transition Drives Per Game', title_x=0.2,
-                            xaxis_title="Team") #template='plotly_dark',
-            #fig.update_traces(marker=dict(size=10))
-            #fig.update_yaxes(range=[min(def_passed_means_team)-0.02, max(def_passed_means_team)+0.01])
+                            xaxis_title="Team",
+                            yaxis_title="") #template='plotly_dark',
             st.plotly_chart(fig)
 
         num_drives_per_game = [num_drives_team[x]/num_games[x] for x in num_drives_team.index]
@@ -210,11 +207,9 @@ def display3(data, original_data):
             
             fig = px.line(ppp_df, x=ppp_df.index, y=ppp_df.columns, color_discrete_sequence=color_to_plot)
             fig.update_layout(width=600, height=400,  
-                            xaxis_title="Minimum # Defenders Passed", 
+                            xaxis_title="# of Defenders Passed", 
                             yaxis_title="Points Per Possession", 
                             legend_title=None) #template='plotly_dark',
-            #fig.update_traces(marker=dict(size=10))
-            #fig.update_yaxes(range=[min(def_passed_means_team)-0.02, max(def_passed_means_team)+0.01])
             st.plotly_chart(fig)
         
         with col2:
@@ -242,7 +237,7 @@ def display4(data):
 
     #Sliders
     #minimum drive distance:
-    min_drive_dist = st.slider('Minimum Drive Distance 1')
+    min_drive_dist = st.slider('Minimum Drive Distance', key='min dist 1')
     data = data[data['Drive Distance'] >= min_drive_dist]
     #minimum number of drives per game:
     min_num_drives = st.slider('Minimum Number of Transition Drives Per Game for a Single Player', min_value=0, max_value=int(max(np.round(num_drives_per_game_df['# Drives Per Game'].values))))
@@ -274,7 +269,8 @@ def display4(data):
         fig = px.bar(x = sorted_player_list, y = sorted_mean_list)
         fig.update_layout(width=1200, height=500,  
                         title='Mean Defenders Passed On a Transition Drive', title_x=0.4,
-                        xaxis_title="Player") #template='plotly_dark',
+                        xaxis_title="Player",
+                        yaxis_title="") #template='plotly_dark',
         #fig.update_traces(marker=dict(size=8))
         #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
         st.plotly_chart(fig)
@@ -287,7 +283,6 @@ def display4(data):
                         title='Number of Drives vs Mean Defenders Passed on the Drive', title_x=0.35,
                         xaxis_title="Mean Defenders Passed", yaxis_title='# of Drives Per Game') #template='plotly_dark',
         fig2.update_traces(textposition='top center', marker=dict(size=8))
-        #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
         st.plotly_chart(fig2)
     
     if button4:
@@ -301,8 +296,7 @@ def display4(data):
                         title='Mean Speed On a Transition Drive', title_x=0.4,
                         xaxis_title="Player",
                         yaxis_title="feet/second") #template='plotly_dark',
-        #fig3.update_traces(marker=dict(size=8))
-        #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
+        fig3.update_yaxes(range=[min(sorted_speed_list)-1, max(sorted_speed_list)+1])
         st.plotly_chart(fig3)
         
         #SPEED BOX CHART
@@ -328,6 +322,25 @@ def display4(data):
 #TODO: create visualizations for PPP of each player
 #TODO: create visualizations based on possession outcomes
 def main():
+    
+    st.title('NBA Transition Tendencies: Driving')
+    st.markdown('''The sidebar contains filtering options. These filters apply to ALL sections, metrics, and charts on this page. 
+                 Filters on the page (not on the sidebar) are applied only to the charts and metrics contained within that section.''')
+    
+    show_defs = st.checkbox('Show Definitions', key='drive definitions')
+    if show_defs:
+        definitions = pd.DataFrame({'Metric': ['Transition Possession', 'Drive', 'Drive Distance', 'Number of Drives in a Possession', 'Number of Defenders the Ball Passed', 'Transition Initiated By', 'Points per Possession'],
+                                    'Definition': ['The first 8 seconds of a possession after a team has forced a turnover, gathered a defensive rebound, or inbounded the ball after being scored on',
+                                                   'Any time a player took at least one dribble', 
+                                                   'The euclidean distance between the points where the player first touched the ball and last touch the ball',
+                                                   'The number of times in a possession a player took at least one dribble when they possessed the ball',
+                                                   'The number of defenders who started ahead of the ball at the start of the drive and ended behind the ball at the end of the drive',
+                                                   'How the transition opportunity was initiated, determined to be off of defensive rebounds or the other teams turnovers and made shots',
+                                                   'Regular points per possession metric, except it includes possessions where no shot was taken (given a value of 0), which skews it to be smaller than normal when including possessions with no shot. Only possessions with at least 1 pass are included in the calculation.']
+                                    })
+
+        st.markdown(definitions.style.hide(axis="index").to_html(), unsafe_allow_html=True)
+    
     drive_df = load_data('data/transition/drive_stats.pkl')
     possessions_df = load_data('data/transition/possession_summaries.pkl')
     
@@ -337,13 +350,15 @@ def main():
     
     show_raw_data, drive_data, selections = create_sidebar(drive_df) 
     
-    drive_data = display1(drive_data, possessions_df, selections)
+    drive_data_selected_team = display1(drive_data, possessions_df, selections)
     
-    display2(drive_data)
+    display2(drive_data_selected_team)
     
     st.markdown('#')
     display3(drive_data, drive_df)
     
+    st.markdown('#')
+    st.markdown('#')
     display4(drive_data)
     
     
@@ -351,3 +366,5 @@ def main():
         st.subheader('Raw data')
         st.write(drive_data)
 main()
+
+#TODO: add descriptions to describe the metrics
