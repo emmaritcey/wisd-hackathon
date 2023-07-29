@@ -8,7 +8,7 @@ import sys
 # adding Folder_2/subfolder to the system path
 sys.path.append('/Users/emmaritcey/Documents/basketball_research/wisd-hackathon')
 from src.visualization.draw_court import make_fig
-from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_num_games_player
+from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_num_games_player, get_ppp_player_df, improve_text_position
 st.set_page_config(layout="wide")
 
 
@@ -152,9 +152,9 @@ def display3(data, original_data):
     
     col1, col2 = st.columns(2)
     with col1:
-        button1 = st.button('Show Defenders Passed Charts')
+        button1 = st.button('Show Defenders Passed Charts', key='pass_1')
     with col2:
-        button2 = st.button('Show Points Per Possession Charts')
+        button2 = st.button('Show Points Per Possession Charts', key='pass2')
     
     def_passed_means_team = data.groupby(['Team Name'])['# Defenders Passed'].mean()
     def_passed_sums_team = data.groupby(['Team Name'])['# Defenders Passed'].sum()
@@ -224,12 +224,12 @@ def display3(data, original_data):
     
 def display4(data):
     st.header('Player Breakdowns') 
-    num_games = get_num_games_player(data, 'Passer')
-    
-    def_passed_sums_player = data.groupby(['Passer'])['# Defenders Passed'].sum() #total number of defenders passed in transition from all passes
-    
+    num_games_dict = get_num_games_player(data, 'Passer')
+    players = np.array(list(num_games_dict.keys())) #get list of players
+    num_games = list(num_games_dict.values())
+        
     num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
-    num_passes_per_game = [round(num_passes_player[x]/num_games[x],2) for x in num_passes_player.index]
+    num_passes_per_game = [round(num_passes_player[x]/num_games_dict[x],2) for x in num_passes_player.index]
     num_passes_per_game_df = pd.DataFrame({'Player':num_passes_player.index, '# Passes Per Game': num_passes_per_game})
     
     #Sliders
@@ -240,49 +240,97 @@ def display4(data):
     min_num_passes = st.slider('Select Minimum Number of Transition Passes Per Game for a Single Player', min_value=0, max_value=int(max(np.round(num_passes_per_game_df['# Passes Per Game'].values))))
     num_passes_per_game_df = num_passes_per_game_df[num_passes_per_game_df['# Passes Per Game'] >= min_num_passes]
     data = data[data['Passer'].isin(num_passes_per_game_df['Player'].values)]
-    
+    #minimum number of games played:
+    min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
+    min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
+    eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
+    data = data[data['Passer'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
+
     def_passed_means_player = data.groupby(['Passer'])['# Defenders Passed'].mean() #number of defenders passed per pass in transition on average
 
-    
-    #MEAN DEFENDERS PASSED
-    zipped_pairs = zip(def_passed_means_player.values, def_passed_means_player.index)
-    sorted_mean_list = sorted(def_passed_means_player.values, reverse=True)
-    sorted_player_list = [x for _, x in sorted(zipped_pairs, reverse=True)]
+    #MEAN DEFENDERS 
+    col1, col2 = st.columns(2)
+    with col1:
+        button3 = st.button('Show Defenders Passed Visualizations', key='pass_3')
+    with col2:
+        button4 = st.button('Show Points per Possession', key='pass_4')
 
-    fig = px.bar(x = sorted_player_list, y = sorted_mean_list)
-    fig.update_layout(width=1200, height=500,  
-                    title='Mean Defenders Passed On a Transition Pass', title_x=0.4,
-                    xaxis_title="Player") #template='plotly_dark',
-    #fig.update_traces(marker=dict(size=8))
-    #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
-    st.plotly_chart(fig)
-    
+    if button3:
+        #MEAN DEFENDERS PASSED
+        zipped_pairs = zip(def_passed_means_player.values, def_passed_means_player.index)
+        sorted_mean_list = sorted(def_passed_means_player.values, reverse=True)
+        sorted_player_list = [x for _, x in sorted(zipped_pairs, reverse=True)]
 
-    #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
-    filtered_num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
-    filtered_num_passes_per_game = [round(filtered_num_passes_player[x]/num_games[x],2) for x in filtered_num_passes_player.index]
-    fig2 = px.scatter(x = def_passed_means_player.values, y = filtered_num_passes_per_game, text = def_passed_means_player.index)
-    fig2.update_layout(width=1200, height=700,  
-                    title='Number of Passes vs Mean Defenders Passed on the Pass', title_x=0.35,
-                    xaxis_title="Mean Defenders Passed", yaxis_title='# of Passes Per Game') #template='plotly_dark',
-    fig2.update_traces(textposition='top center', marker=dict(size=8))
-    #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
-    st.plotly_chart(fig2)
+        fig = px.bar(x = sorted_player_list, y = sorted_mean_list)
+        fig.update_layout(width=1200, height=500,  
+                        title='Mean Defenders Passed On a Transition Pass', title_x=0.4,
+                        xaxis_title="Player",
+                        yaxis_title="") #template='plotly_dark',
+        #fig.update_traces(marker=dict(size=8))
+        #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
+        st.plotly_chart(fig)
         
+
+        #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
+        filtered_num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
+        filtered_num_passes_per_game = [round(filtered_num_passes_player[x]/num_games_dict[x],2) for x in filtered_num_passes_player.index]
+        fig2 = px.scatter(x = filtered_num_passes_per_game, y = def_passed_means_player.values, text = def_passed_means_player.index)
+        fig2.update_layout(width=1200, height=700,  
+                        title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
+                        xaxis_title="# of Passes Per Game", yaxis_title='Mean Defenders Passed') #template='plotly_dark',
+        fig2.update_traces(textposition='top center', marker=dict(size=8))
+        #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
+        st.plotly_chart(fig2)
     
+    if button4:
+        st.markdown('#')
+        st.markdown('The chart below shows the teams points per possession when a certain player passes the ball at least once in a transition possession. Use the filters above and on the sidebar to include desired pool of players and play types.')
+        
+        ppp_df = get_ppp_player_df(data, 'Passer')
+        ppp_df_sorted = ppp_df.sort_values('Points per Possession', ascending=False).reset_index()
+        
+        colors = {'Boston Celtics': 'green', 'Dallas Mavericks': 'blue', 'Golden State Warriors': 'gold', 'Miami Heat': 'red'}
+        fig = px.bar(ppp_df_sorted, x=ppp_df_sorted.index, y='Points per Possession', color='Team', color_discrete_map=colors)
+        fig.update_layout(width=1200, height=500,  
+                        xaxis_title="Player", 
+                        xaxis = dict(tickmode='array', tickvals = ppp_df_sorted.index, ticktext = ppp_df_sorted['Player']),
+                        yaxis_title="Points Per Possession", 
+                        legend_title=None) #template='plotly_dark',
+        st.plotly_chart(fig)
+        
+        #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
+        filtered_num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
+        filtered_num_passes_per_game = [round(filtered_num_passes_player[x]/num_games_dict[x],2) for x in filtered_num_passes_player.index]
+        fig2 = px.scatter(x = filtered_num_passes_per_game, 
+                          y = def_passed_means_player.values, 
+                          text = def_passed_means_player.index, 
+                          color=ppp_df['Team'], 
+                          color_discrete_map=colors, 
+                          size=ppp_df['Points per Possession'])
+        fig2.update_layout(width=1200, height=700,  
+                        title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
+                        xaxis_title="# of Passes Per Game", yaxis_title='Mean Defenders Passed') #template='plotly_dark',
+        fig2.update_traces(textposition=improve_text_position(def_passed_means_player.index))
+
+        #fig.update_traces(textfont_size=11, marker=dict(size=10), textposition=improve_text_position(df['reb']))
+        st.plotly_chart(fig2)
+        st.markdown("**Size of the marker represents the points per possession produced by the player's drives")
+   
 
 def main():
     st.title('NBA Transition Tendencies: Passing')
     st.markdown('''The sidebar contains filtering options. These filters apply to ALL sections, metrics, and charts on this page. 
-                 Filters on the page (not on the sidebar) are applied only to the charts and metrics contained within that section.''')
+                 Filters on the page (not on the sidebar) are applied only to the charts and metrics contained within that section.
+                 Click "Show Definitions" to view descriptions of important metrics and terms, such as how a transition possession was defined.''')
     
     show_defs = st.checkbox('Show Definitions', key='pass definitions')
     if show_defs:
-        definitions = pd.DataFrame({'Metric': ['Transition Possession', 'Pass Distance', 'Number of Defenders the Ball Passed', 'Transition Initiated By', 'Points per Possession'],
+        definitions = pd.DataFrame({'Metric': ['Transition Possession', 'Transition Initiated By', 'Transition Outcome', 'Pass Distance', 'Number of Defenders the Ball Passed', 'Points per Possession'],
                                     'Definition': ['The first 8 seconds of a possession after a team has forced a turnover, gathered a defensive rebound, or inbounded the ball after being scored on',
+                                                   'How the transition opportunity was initiated, determined to be off of defensive rebounds or the other teams turnovers and made shots',                                                   
+                                                   'The outcome of the transition possession (no shot, shot, non-shooting foul, stoppage, turnover). "No shot" means there was no shot within the first 8 seconds after gaining possession. "Shot" means either a shot was taken or a shooting foul was comitted. A "stoppage" means the clock stopped but the offensive team retained possession.',                                                   
                                                    'The euclidean distance between the points where the passer made the pass and the receiver caught the ball',
                                                    'The number of defenders who started ahead of the ball at the start of the pass and ended behind the ball when the pass was caught',
-                                                   'How the transition opportunity was initiated, determined to be off of defensive rebounds or the other teams turnovers and made shots',
                                                    'Regular points per possession metric, except it includes possessions where no shot was taken (given a value of 0), which skews it to be smaller than normal when including possessions with no shot. Only possessions with at least 1 pass are included in the calculation.']
                                     })
 
@@ -293,7 +341,10 @@ def main():
     
     pass_df.loc[np.isnan(pass_df['# Defenders Passed']), '# Defenders Passed'] = None
     pass_df['Pass Distance'] = round(pass_df['Pass Distance'] * 2) / 2
-    pass_df.loc[pass_df['Transition Trigger'] == 'SHOT', 'Transition Trigger'] = "MADE SHOT"
+    pass_df.loc[pass_df['Transition Trigger'] == 'SHOT', 'Transition Trigger'] = "Made Shot"
+    pass_df.loc[pass_df['Transition Trigger'] == 'REB', 'Transition Trigger'] = "Defensive Rebound"
+    pass_df.loc[pass_df['Transition Trigger'] == 'TO', 'Transition Trigger'] = "Turnover"
+    pass_df.loc[pass_df['Outcome'] == 'foul', 'Outcome'] = "non-shooting foul"
 
     show_raw_data, pass_data, selections = create_sidebar(pass_df) 
     

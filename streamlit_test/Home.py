@@ -17,7 +17,7 @@ st.set_page_config(layout="wide")
 def main():
     st.title('NBA Transition Tendencies')
     st.markdown('#')
-    st.markdown('This app is designed to assess teams transition tendencies during the 2022 ECF, WCF, and Finals.')
+    st.markdown('This app is designed to assess teams transition tendencies during the 2022 ECF, WCF, and Finals using player tracking data, play-by-play data, and event data.')
     st.markdown('The 4 teams transition stats are below, gathered from nba.com/stats')
     st.markdown('#')
     
