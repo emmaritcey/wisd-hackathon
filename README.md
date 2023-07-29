@@ -16,6 +16,6 @@ Get transition stats and passing stats:
 
 To run Streamlit Application in web browser:
 >>> streamlit run Home.py
-- if on Mac, may need to install Xcode command line tools:
+- if on Mac, may need to first install Xcode command line tools:
 >>> xcode-select --install
 
