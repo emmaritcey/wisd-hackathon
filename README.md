@@ -9,23 +9,23 @@ To install required libraries, run:
 pip install -r requirements.txt
 ```
 If on Mac, may need to also install Xcode command line tools to run Streamlit:
-'''bash
+```bash
 xcode-select --install
-'''
+```
 
 ## Download Data
 To download the data from AWS:
-'''bash
->>>python3 download_data.py
-'''
+```bash
+python3 download_data.py
+```
 * saves event and tracking data in data/games/gameId folders
 * saves metadata in data/metadata folder
 
 ## Preprocess Data
 To get transition data and stats:
-'''bash
->>>python3 get_transition_stats.py
-'''
+```bash
+python3 get_transition_stats.py
+```
 * saves transition possession summaries in data/transition/possession_summaries.pkl
 * saves transition passing stats in data/transition/pass_stats.pkl
 * saves transition drive stats in data/transition/drive_stats.pkl
@@ -33,7 +33,7 @@ To get transition data and stats:
 
 
 To run Streamlit Application in web browser:
-'''bash
+```bash
 >>>streamlit run Home.py
-'''
+```
 
