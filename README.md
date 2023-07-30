@@ -34,6 +34,6 @@ python3 get_transition_stats.py
 
 To run Streamlit Application in web browser:
 ```bash
->>>streamlit run Home.py
+>>>streamlit run transition_app/Home.py
 ```
 
