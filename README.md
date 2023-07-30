@@ -30,7 +30,7 @@ python3 get_transition_stats.py
 * saves transition possession summaries in data/transition/possession_summaries.pkl
 * saves transition passing stats in data/transition/pass_stats.pkl
 * saves transition drive stats in data/transition/drive_stats.pkl
-* saves all transition tracking data in data/transition/>>>possessions_tracking/
+* saves all transition tracking data in data/transition/possessions_tracking/
 
 
 To run Streamlit Application in web browser:
