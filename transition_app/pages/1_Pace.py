@@ -36,7 +36,7 @@ def main():
         fig = px.bar(x = time_crossed_mean.index, y = time_crossed_mean.values)
         #fig = px.bar(x = time_crossed_mean.index, y = [time_crossed_mean.values,time_crossed_median.values], barmode='group')
         fig.update_layout(width=600, height=400,  
-                        title=dict(text='Average Time the Ball Crosses Half', x=0.25, font=dict(size=23)),
+                        title=dict(text='Average Time it takes for the Ball to Cross Half', x=0.15, font=dict(size=23)),
                         xaxis_title="Team",
                         yaxis_title="Seconds") #template='plotly_dark',
         st.plotly_chart(fig)

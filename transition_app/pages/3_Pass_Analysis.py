@@ -42,38 +42,39 @@ def display1(data, possessions_df, selections):
     col1, col2 = st.columns([1,3])
     
     with col1:
+        
+
+        st.subheader('Displaying Passes for:')
+        _, data = create_selectbox(data, 'Team Name', 'Team:', False)
+        
+        col1_2, col2_2 = st.columns(2)
+        with col1_2:
+            #Number Increments
+            #minimum # of passes in a possession
+            options = np.append(['At least 1'], sorted(possessions_df['# Passes'].unique())[1:])
+            num_passes = st.selectbox('Number of Passes in the Possession', options, index=0)
+            if num_passes != 'At least 1':
+                indices = possessions_df[possessions_df['# Passes'] == int(num_passes)].index.values
+                data = data[data['Transition Index'].isin(indices)]
+        with col2_2:
+            #minimum # of defenders passed on a pass
+            options = np.append(['Any'], np.arange(0,6))
+            def_passed= st.selectbox('Number of Defenders the Ball Passed', options, index=0)
+            #min_def_passed = st.number_input('Min # of Defenders the Ball Passed', min_value=0, max_value=5, step=1)
+            if def_passed != 'Any':
+                data = data[data['# Defenders Passed'] == int(def_passed)]
+        
+        #Sliders
+        #minimum pass distance:
+        min_pass_dist = st.slider('Minimum Pass Distance')
+        data = data[data['Pass Distance'] >= min_pass_dist]            
+        
+        st.markdown('Series: ' + selections['Series'])
+        st.markdown('Game: ' + selections['Game'])
+        st.markdown('Player: ' + selections['Passer'])
+        st.markdown('Transition initiated by: ' + selections['Trigger'])
+        st.markdown('Outcome: ' + selections['Outcome'])
         show_passes = st.checkbox('Show Passes')
-        if show_passes:
-            st.subheader('Displaying Passes for:')
-            _, data = create_selectbox(data, 'Team Name', 'Team:', False)
-            
-            col1_2, col2_2 = st.columns(2)
-            with col1_2:
-                #Number Increments
-                #minimum # of passes in a possession
-                options = np.append(['At least 1'], sorted(possessions_df['# Passes'].unique())[1:])
-                num_passes = st.selectbox('Number of Passes in the Possession', options, index=0)
-                if num_passes != 'At least 1':
-                    indices = possessions_df[possessions_df['# Passes'] == int(num_passes)].index.values
-                    data = data[data['Transition Index'].isin(indices)]
-            with col2_2:
-                #minimum # of defenders passed on a pass
-                options = np.append(['Any'], np.arange(0,6))
-                def_passed= st.selectbox('Number of Defenders the Ball Passed', options, index=0)
-                #min_def_passed = st.number_input('Min # of Defenders the Ball Passed', min_value=0, max_value=5, step=1)
-                if def_passed != 'Any':
-                    data = data[data['# Defenders Passed'] == int(def_passed)]
-            
-            #Sliders
-            #minimum pass distance:
-            min_pass_dist = st.slider('Minimum Pass Distance')
-            data = data[data['Pass Distance'] >= min_pass_dist]            
-            
-            st.text('Series: ' + selections['Series'])
-            st.text('Game: ' + selections['Game'])
-            st.text('Player: ' + selections['Passer'])
-            st.text('Transition initiated by: ' + selections['Trigger'])
-            st.text('Outcome: ' + selections['Outcome'])
 
     with col2:
         plt.style.use('dark_background')
@@ -163,8 +164,7 @@ def display3(data, original_data):
     def_passed_means_team = data.groupby(['Team Name'])['# Defenders Passed'].mean()
     def_passed_sums_team = data.groupby(['Team Name'])['# Defenders Passed'].sum()
     num_passes_team = data.groupby(['Team Name'])['# Defenders Passed'].count()
-    num_games = get_num_games(original_data)
-    
+    num_games = get_num_games(data)
     
     if button1: #DEFENDERS PASSED CHARTS
         col1, col2 = st.columns(2)
@@ -191,7 +191,7 @@ def display3(data, original_data):
             fig = px.scatter(x = num_passes_per_game, y = def_passed_means_team.values, text = def_passed_sums_team.index)
             fig.update_layout(width=600, height=500,  
                             title='Mean # of Defenders Passed per Pass vs # of Passes per Game', title_x=0.22,
-                            xaxis_title="Numer of Passes Per Game",
+                            xaxis_title="Numer of Transition Passes Per Game",
                             yaxis_title='Mean Defenders Passed') #template='plotly_dark',
             fig.update_traces(marker=dict(size=10), textposition='top center')
             fig.update_xaxes(range=[min(num_passes_per_game)-5, max(num_passes_per_game)+5])
@@ -208,7 +208,7 @@ def display3(data, original_data):
             
             fig = px.line(ppp_df, x=ppp_df.index, y=ppp_df.columns, color_discrete_sequence=color_to_plot)
             fig.update_layout(width=600, height=400,  
-                            title='Points Per Possession', title_x=0.3,
+                            yaxis_title='Points Per Possession',
                             xaxis_title="# of Defenders Passed", legend_title=None) #template='plotly_dark',
             st.plotly_chart(fig)
         
@@ -219,7 +219,7 @@ def display3(data, original_data):
             
             fig2 = px.line(ppp_df2, x=ppp_df2.index, y=ppp_df2.columns, color_discrete_sequence=color_to_plot2)
             fig2.update_layout(width=600, height=400,  
-                            title='Points Per Possession', title_x=0.3,
+                            yaxis_title='Points Per Possession', 
                             xaxis_title="Minimum Pass Distance", legend_title=None) 
             st.plotly_chart(fig2)
         
@@ -282,7 +282,7 @@ def display4(data):
         fig2 = px.scatter(x = filtered_num_passes_per_game, y = def_passed_means_player.values, text = def_passed_means_player.index)
         fig2.update_layout(width=1200, height=700,  
                         title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
-                        xaxis_title="# of Passes Per Game", yaxis_title='Mean Defenders Passed') 
+                        xaxis_title="# of Transition Passes Per Game", yaxis_title='Mean Defenders Passed') 
         fig2.update_traces(textposition='top center', marker=dict(size=8))
         st.plotly_chart(fig2)
     
@@ -313,11 +313,11 @@ def display4(data):
                           size=ppp_df['Points per Possession'])
         fig2.update_layout(width=1200, height=700,  
                         title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
-                        xaxis_title="# of Passes Per Game", yaxis_title='Mean Defenders Passed')
+                        xaxis_title="# of Transition Passes Per Game", yaxis_title='Mean Defenders Passed')
         fig2.update_traces(textposition=improve_text_position(def_passed_means_player.index))
         st.plotly_chart(fig2)
         
-        st.markdown("**Size of the marker represents the points per possession produced by the player's drives")
+        st.markdown("**Size of the marker represents the points per possession produced by the player's passes")
    
 
 def main():

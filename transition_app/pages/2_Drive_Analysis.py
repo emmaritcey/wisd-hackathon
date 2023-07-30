@@ -43,38 +43,38 @@ def display1(data, possessions_df, selections):
     col1, col2 = st.columns([1,3])
     
     with col1: #WIDGETS/FILTERS
-        show_drives = st.checkbox('Show Drives')
-        if show_drives:
-            st.markdown('##### Displaying Drives for:')
-            _, data = create_selectbox(data, 'Team Name', 'Team:', False)
-                
-            col1_2, col2_2 = st.columns(2)
-            with col1_2:
-                #Number Increments
-                # # of drives in a possession
-                options = np.append(['At least 1'], sorted(possessions_df['# Drives'].unique())[1:])
-                num_drives = st.selectbox('Number of Drives in the Possession', options, index=0)
-                if num_drives != 'At least 1':
-                    indices = possessions_df[possessions_df['# Drives'] == int(num_drives)].index.values
-                    data = data[data['Transition Index'].isin(indices)]
-            with col2_2:
-                # # of defenders passed on a drive
-                options = np.append(['Any'], np.arange(0,6))
-                def_passed= st.selectbox('Number of Defenders the Ball Passed', options, index=0)
-                if def_passed != 'Any':
-                    data = data[data['# Defenders Passed'] == int(def_passed)]
-     
-            #Sliders
-            #minimum drive distance:
-            min_drive_dist = st.slider('Minimum Drive Distance', key='min dist 2')
-            data = data[data['Drive Distance'] >= min_drive_dist]
+        
+        
+        st.markdown('##### Displaying Drives for:')
+        _, data = create_selectbox(data, 'Team Name', 'Team:', False)
             
-            st.markdown('Series: ' + selections['Series'])
-            st.markdown('Game: ' + selections['Game'])
-            st.markdown('Player: ' + selections['Driver'])
-            st.markdown('Transition initiated by: ' + selections['Trigger'])
-            st.markdown('Outcome: ' + selections['Outcome'])
-
+        col1_2, col2_2 = st.columns(2)
+        with col1_2:
+            #Number Increments
+            # # of drives in a possession
+            options = np.append(['At least 1'], sorted(possessions_df['# Drives'].unique())[1:])
+            num_drives = st.selectbox('Number of Drives in the Possession', options, index=0)
+            if num_drives != 'At least 1':
+                indices = possessions_df[possessions_df['# Drives'] == int(num_drives)].index.values
+                data = data[data['Transition Index'].isin(indices)]
+        with col2_2:
+            # # of defenders passed on a drive
+            options = np.append(['Any'], np.arange(0,6))
+            def_passed= st.selectbox('Number of Defenders the Ball Passed', options, index=0)
+            if def_passed != 'Any':
+                data = data[data['# Defenders Passed'] == int(def_passed)]
+    
+        #Sliders
+        #minimum drive distance:
+        min_drive_dist = st.slider('Minimum Drive Distance', key='min dist 2')
+        data = data[data['Drive Distance'] >= min_drive_dist]
+        
+        st.markdown('Series: ' + selections['Series'])
+        st.markdown('Game: ' + selections['Game'])
+        st.markdown('Player: ' + selections['Driver'])
+        st.markdown('Transition initiated by: ' + selections['Trigger'])
+        st.markdown('Outcome: ' + selections['Outcome'])
+        show_drives = st.checkbox('Show Drives')
     with col2: #COURT
         plt.style.use('dark_background')
         fig2 = plt.figure(figsize=(12, 7))
@@ -161,7 +161,7 @@ def display3(data, original_data):
     def_passed_means_team = data.groupby(['Team Name'])['# Defenders Passed'].mean()
     def_passed_sums_team = data.groupby(['Team Name'])['# Defenders Passed'].sum()
     num_drives_team = data.groupby(['Team Name'])['# Defenders Passed'].count()
-    num_games = get_num_games(original_data)
+    num_games = get_num_games(data)
     
     if button1: #DEFENDERS PASSED
         col1, col2 = st.columns(2)
@@ -190,7 +190,7 @@ def display3(data, original_data):
             fig = px.scatter(x = num_drives_per_game, y = def_passed_means_team.values, text = def_passed_sums_team.index)
             fig.update_layout(width=600, height=400,  
                             title='Mean Defenders Passed vs # of Drives Per Game', title_x=0.25,
-                            xaxis_title="Numer of Drives Per Game",
+                            xaxis_title="Numer of Transition Drives Per Game",
                             yaxis_title='Mean Defenders Passed') 
             fig.update_traces(marker=dict(size=10), textposition='top center')
             fig.update_xaxes(range=[min(num_drives_per_game)-5, max(num_drives_per_game)+5])
@@ -286,7 +286,7 @@ def display4(data):
         fig2 = px.scatter(x = filtered_num_drives_per_game, y = def_passed_means_player.values, text = def_passed_means_player.index)
         fig2.update_layout(width=1200, height=700,  
                         title='Mean Defenders Passed on the Drive vs Number of Drives', title_x=0.35,
-                        xaxis_title="# of Drives Per Game", yaxis_title='Mean Defenders Passed') #template='plotly_dark',
+                        xaxis_title="# of Transition Drives Per Game", yaxis_title='Mean Defenders Passed') #template='plotly_dark',
         fig2.update_traces(textposition='top center', marker=dict(size=10))
         st.plotly_chart(fig2)
     
