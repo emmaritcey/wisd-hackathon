@@ -18,11 +18,12 @@ def main():
     st.title('Pace of Play')
     st.markdown('''For the purpose of this project, a transition possession was defined as the first 8 seconds of a possession after a 
              team has gained possession after forcing a turnover, gathering a defensive rebound, or inbounding the ball after being 
-             scored on. A possession in which a team did not take a shot in the first 8 seconds is still considered a transition 
+             scored on. A possession in which a team did not take a shot in the first 8 seconds was still considered a transition 
              possession, but with the outcome being 'no shot'.''')
-    st.markdown('''Below  are two statistics that help gain an initial sense of a team's pace of play and how often they play
-             in transition (ie take a shot in the first 8 seconds of a possession). There are of course situational factors that play 
-             into whether a team will seek an early shot, including time and score, personell, and game flow.''')
+    st.markdown('''Below  are two statistics that help gain an initial sense of each team's pace of play in the 2022 ECF, WCF, and Finals 
+                and how often they played in transition (ie took a shot in the first 8 seconds of a possession). There are of course 
+                situational factors that play into whether a team will seek an early shot, including time and score, personell, and game flow. 
+                These factors are not taken into consideration for this project.''')
     
     df = load_data('data/transition/possession_summaries.pkl')
     df.loc[df['Outcome'] == 'foul', 'Outcome'] = "non-shooting foul"
