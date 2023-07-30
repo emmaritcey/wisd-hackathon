@@ -21,6 +21,7 @@ python3 download_data.py
 ```
 * saves event and tracking data in data/games/gameId folders
 * saves metadata in data/metadata folder
+* the AWS credentials are not included in this repo
 
 ## Preprocess Data
 To get transition data and stats:
