@@ -7,6 +7,6 @@ numpy
 pandas
 nba-api
 plotly
-sklearn
+scikit-learn
 nbformat
 streamlit
