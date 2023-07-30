@@ -29,7 +29,7 @@ def main():
                                'Effective Field Goal %': [63.0, 53.8, 64.4, 61.1],
                                'Free Throw Frequency': [21.2, 17.7, 12.3, 13.4],
                                'Turnover Frequency': [12.1, 7.2, 17.3, 10.7]})
-    df = trans_stats.style.highlight_max(color = 'blue', axis = 0, subset=trans_stats.columns[1:]).format(precision=2)
+    df = trans_stats.style.highlight_max(color = '#1f77b4', axis = 0, subset=trans_stats.columns[1:]).format(precision=2)
 
     col1, col2, _, _, _ = st.columns(5)
     with col1:
