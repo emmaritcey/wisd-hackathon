@@ -1,4 +1,5 @@
 .env
+.venv
 testing.ipynb
 visualizations.ipynb
 model_testing.ipynb
