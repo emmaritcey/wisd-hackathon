@@ -28,7 +28,7 @@ def download_s3_bucket(bucket_name, keys):
 
 
 def main():
-    #load_dotenv() #not sure if i need this
+    load_dotenv() #credentials stored as environment variables in .env file
     
     bucket = 'sportradar-wisd-data'
     keys = ['games', 'metadata'] #folders within the bucket
