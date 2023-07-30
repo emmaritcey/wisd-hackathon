@@ -18,7 +18,7 @@ def main():
     st.title('NBA Transition Tendencies')
     st.markdown('#')
     st.markdown('This app is designed to assess teams transition tendencies during the 2022 ECF, WCF, and Finals using player tracking data, play-by-play data, and event data.')
-    st.markdown('The 4 teams transition stats are below, gathered from nba.com/stats')
+    st.markdown('The 4 teams transition stats are below, gathered from nba.com/stats. Note that these stats are calculated from ALL games played throughout the 2022 playoffs while all other sections only used data from games from the 2022 ECF, WCF, and Finals.')
     st.markdown('#')
     
     trans_stats =pd.DataFrame({'Team': ['Boston Celtics', 'Dallas Mavericks', 'Golden State Warriors', 'Miami Heat'],
