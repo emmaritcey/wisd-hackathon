@@ -248,10 +248,12 @@ def display4(data):
     num_drives_per_game_df = num_drives_per_game_df[num_drives_per_game_df['# Drives Per Game'] >= min_num_drives]
     data = data[data['Driver'].isin(num_drives_per_game_df['Player'].values)]
     #minimum number of games played:
-    min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
-    min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
-    eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
-    data = data[data['Driver'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
+    if max(num_games) > 1:
+        min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
+        min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
+        eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
+        data = data[data['Driver'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
+        
 
     def_passed_means_player = data.groupby(['Driver'])['# Defenders Passed'].mean() #number of defenders passed per drive in transition on average
     speed_means_player = data.groupby(['Driver'])['Speed'].mean()

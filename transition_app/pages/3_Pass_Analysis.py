@@ -241,10 +241,11 @@ def display4(data):
     num_passes_per_game_df = num_passes_per_game_df[num_passes_per_game_df['# Passes Per Game'] >= min_num_passes]
     data = data[data['Passer'].isin(num_passes_per_game_df['Player'].values)]
     #minimum number of games played:
-    min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
-    min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
-    eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
-    data = data[data['Passer'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
+    if max(num_games) > 1:
+        min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
+        min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
+        eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
+        data = data[data['Passer'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
 
     def_passed_means_player = data.groupby(['Passer'])['# Defenders Passed'].mean() #number of defenders passed per pass in transition on average
 
