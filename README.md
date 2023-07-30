@@ -4,9 +4,10 @@ This code in this repository is part of a submission to the WISD Hackacthon. The
 
 ## Setup/Installation Requirements
 The only requirements for this code are a computer, internet connection, and Python 3.0 or above
-To install required libraries, run: 
+To begin, download the repository and create a virtual environment. 
+To install required libraries to virtual environment, run: 
 ```bash
-pip install -r requirements.txt
+python3 -m pip install -r requirements.txt
 ```
 If on Mac, may need to also install Xcode command line tools to run Streamlit:
 ```bash
