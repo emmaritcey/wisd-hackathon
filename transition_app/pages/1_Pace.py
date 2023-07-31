@@ -22,7 +22,7 @@ def main():
              possession, but with the outcome being 'no shot'.''')
     st.markdown('''Below  are two statistics that help gain an initial sense of each team's pace of play in the 2022 ECF, WCF, and Finals 
                 and how often they played in transition (ie took a shot in the first 8 seconds of a possession). There are of course 
-                situational factors that play into whether a team will seek an early shot, including time and score, personell, and game flow. 
+                situational factors that play into whether a team will seek an early shot, including time and score, personel, and game flow. 
                 These factors are not taken into consideration for this project.''')
     
     df = load_data('data/transition/possession_summaries.pkl')

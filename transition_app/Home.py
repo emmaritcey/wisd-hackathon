@@ -58,7 +58,7 @@ def main():
     
     st.subheader("A few takeaways from these stats:")
     st.markdown("- Golden State created the most transition possessions and maintained the highest eFG% but also had the highest TO% and lowest FT%")
-    st.markdown("- Boston had the highest points per possession, points per game, eFG%, and FT%")
+    st.markdown("- Boston had the highest points per possession, points per game, FG%, and FT%")
     st.markdown("- Dallas created the fewest transition possessions, and on these possessions scored the least efficiently by a large margin")
     st.markdown("#")
     st.markdown("##### The Drive Analysis and Pass Analysis pages aim to identify how teams and players are attacking in transition and when they are most successful.")

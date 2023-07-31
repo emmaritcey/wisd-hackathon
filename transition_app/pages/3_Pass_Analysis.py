@@ -74,9 +74,10 @@ def display1(data, possessions_df, selections):
         st.markdown('Player: ' + selections['Passer'])
         st.markdown('Transition initiated by: ' + selections['Trigger'])
         st.markdown('Outcome: ' + selections['Outcome'])
-        show_passes = st.checkbox('Show Passes')
+        
 
     with col2:
+        show_passes = st.checkbox('Click to show Passes')
         plt.style.use('dark_background')
         fig2 = plt.figure(figsize=(12, 7))
 
@@ -171,7 +172,7 @@ def display3(data, original_data):
         with col1: #MEAN DEFENDERS PASSED
             fig = px.bar(x = def_passed_means_team.index, y = def_passed_means_team.values)
             fig.update_layout(width=600, height=400,  
-                            title='Mean # of Defenders Passed on Each Transition Pass', title_x=0.3,
+                            title='Mean # of Defenders Passed per Pass', title_x=0.3,
                             xaxis_title="Team",
                             yaxis_title="") #template='plotly_dark',
             st.plotly_chart(fig)
@@ -334,7 +335,7 @@ def main():
                                                    'The outcome of the transition possession (no shot, shot, non-shooting foul, stoppage, turnover). "No shot" means there was no shot within the first 8 seconds after gaining possession. "Shot" means either a shot was taken or a shooting foul was comitted. A "stoppage" means the clock stopped but the offensive team retained possession.',                                                   
                                                    'The euclidean distance between the points where the passer made the pass and the receiver caught the ball',
                                                    'The number of defenders who started ahead of the ball at the start of the pass and ended behind the ball when the pass was caught',
-                                                   'Regular points per possession metric, except it includes possessions where no shot was taken (given a value of 0), which skews it to be smaller than normal when including possessions with no shot. Only possessions with at least 1 pass are included in the calculation.']
+                                                   'Calculated as [3*(# of three point field goals) + 2*(# of two point field goals) + 1.5*(# of shooting fouls)] / (# of possessions). Because possessions that did not result in a shot in the first 8 seconds are included, this metric is skewed to be smaller than normal when including possessions with no shot. Only possessions with at least 1 pass are included in the calculation.']
                                     })
 
         st.markdown(definitions.style.hide(axis="index").to_html(), unsafe_allow_html=True)

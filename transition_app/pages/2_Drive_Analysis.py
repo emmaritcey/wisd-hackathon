@@ -36,9 +36,9 @@ def display1(data, possessions_df, selections):
     Court and drives figure with extra widgets
     '''
     st.header('Overview of Drives')
-    st.markdown('- Passes that belong to possessions that ended in a :red[**MADE SHOT**] within the first 8 seconds of the shot clock are represented by :red[**RED**] arrows')
-    st.markdown('- Passes that belong to possessions that ended in a :blue[**MISSED SHOT**] within the first 8 seconds of the shot clock are represented by :blue[**BLUE**] arrows')
-    st.markdown('- Passes that belong to possessions that ended in **NO SHOT** within the first 8 seconds of the shot clock are represented by **WHITE** arrows')
+    st.markdown('- Drives that belong to possessions that ended in a :red[**MADE SHOT**] within the first 8 seconds of the shot clock are represented by :red[**RED**] arrows')
+    st.markdown('- Drives that belong to possessions that ended in a :blue[**MISSED SHOT**] within the first 8 seconds of the shot clock are represented by :blue[**BLUE**] arrows')
+    st.markdown('- Drives that belong to possessions that ended in **NO SHOT** within the first 8 seconds of the shot clock are represented by **WHITE** arrows')
     st.markdown("- Note that the arrows only depict the start and end location of a drive. Players actual track between these two locations would be much more variable.")
     col1, col2 = st.columns([1,3])
     
@@ -74,8 +74,9 @@ def display1(data, possessions_df, selections):
         st.markdown('Player: ' + selections['Driver'])
         st.markdown('Transition initiated by: ' + selections['Trigger'])
         st.markdown('Outcome: ' + selections['Outcome'])
-        show_drives = st.checkbox('Show Drives')
+        
     with col2: #COURT
+        show_drives = st.checkbox('Click to show Drives')
         plt.style.use('dark_background')
         fig2 = plt.figure(figsize=(12, 7))
 
@@ -169,7 +170,7 @@ def display3(data, original_data):
         with col1: #MEAN DEFENDERS PASSED
             fig = px.bar(x = def_passed_means_team.index, y = def_passed_means_team.values)
             fig.update_layout(width=600, height=500,  
-                            title='Mean Defenders Passed on Each Transition Drive', title_x=0.25,
+                            title='Mean Defenders Passed Per Drive', title_x=0.25,
                             xaxis_title="Team",
                             yaxis_title="") 
             st.plotly_chart(fig)
@@ -363,8 +364,8 @@ def main():
                                                    'The total euclidean distance (in feet) of a drive (sum of distances between each recorded location of the drive) divided by the length of the drive (in seconds)',
                                                    'The number of times in a possession a player took at least one dribble when they possessed the ball',
                                                    'The number of defenders who started ahead of the ball at the start of the drive and ended behind the ball at the end of the drive',
-                                                   'Regular points per possession metric, except it includes possessions where no shot was taken (given a value of 0), which skews it to be smaller than normal when including possessions with no shot. Only possessions with at least 1 pass are included in the calculation.']
-                                    })
+                                                   'Calculated as [3*(# of three point field goals) + 2*(# of two point field goals) + 1.5*(# of shooting fouls)] / (# of possessions). Because possessions that did not result in a shot in the first 8 seconds are included, this metric is skewed to be smaller than normal when including possessions with no shot. Only possessions with at least 1 pass are included in the calculation.']
+                                    }) 
 
         st.markdown(definitions.style.hide(axis="index").to_html(), unsafe_allow_html=True)
     
