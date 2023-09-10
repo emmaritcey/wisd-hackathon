@@ -262,17 +262,7 @@ def display3(data, original_data):
                             xaxis_title="Team",
                             yaxis_title="") #template='plotly_dark',
             st.plotly_chart(fig)
-        
-        # with col2: #TOTAL DEFENDERS PASSED PER GAME
-        #     num_def_passed_per_game = [def_passed_sums_team[x]/num_games[x] for x in def_passed_sums_team.index]
-        #     fig = px.bar(x = def_passed_sums_team.index, y = num_def_passed_per_game)
-        #     fig.update_layout(width=600, height=400,  
-        #                     title='Total # of Defenders Passed on Transition Passes per Game', title_x=0.2,
-        #                     xaxis_title="Team",
-        #                     yaxis_title="") #template='plotly_dark',
-        #     st.plotly_chart(fig)
-        
-        #col1, col2, col3 = st.columns([25,60,15])
+            
         with col2: #MEAN PER PASS vs TOTAL PER GAME
             num_passes_per_game = [num_passes_team[x]/num_games[x] for x in num_passes_team.index]
             fig = px.scatter(x = num_passes_per_game, y = def_passed_means_team.values, text = def_passed_sums_team.index)
@@ -481,6 +471,3 @@ def main():
 
 main()
     
-
-
-#TODO: add summarizing charts, points per possession, etc

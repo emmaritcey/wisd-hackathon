@@ -199,95 +199,26 @@ def display2(data):
     shots_data = data[data['OutcomeMSG'].isin([1,2,6])]
     num_shots = len(np.unique(shots_data['Transition Index'].values))
     
-    
-    # num_no_paint_touches, num_shots_no_pt, data_no_pt = get_paint_touches(data, False)
-    # ppp_no_pt = get_ppp(data_no_pt)
-    # num_possessions_no_pt = len(np.unique(data_no_pt['Transition Index'].values))
-    
-    # num_paint_touches, num_shots_pt, data_pt = get_paint_touches(data, True)
-    # ppp_pt = get_ppp(data_pt)
-    # num_possessions_pt = len(np.unique(data_pt['Transition Index'].values))
-    
-    
     try:
         perc_shots = num_shots / num_possessions
         perc_shots = str(round(perc_shots*100,1)) + '%'
     except ZeroDivisionError:
         perc_shots = '-'
 
-
-        
-    # try:
-    #     perc_paint_touches = num_paint_touches / num_possessions
-    #     perc_paint_touches = str(round(perc_paint_touches*100,1)) + '%'
-    # except ZeroDivisionError:
-    #     perc_paint_touches = '-'
     
     #All drives
     col1, col2, col3, col4, col5 = st.columns(5)
     with col1:
         st.metric('Average Drive Distance', ave_dist)
     with col2:
-        st.metric('Number of Shots', num_shots)
+        st.metric('Number of Possessions', num_possessions)
     with col3:
-        st.metric('% of Possessions Ending in a Shot', perc_shots)
-    with col4:
         st.metric('Points per possession*', ppp)
-    # with col5:
-    #     st.metric('% of Possessions with a Paint Touch', perc_paint_touches)
-        
-        
-    # #Getting into the paint
-    # try:
-    #     perc_shots_pt = num_shots_pt / num_possessions_pt
-    #     perc_shots_pt = str(round(perc_shots_pt*100,1)) + '%'
-    # except ZeroDivisionError:
-    #     perc_shots_pt = '-'
-        
-    # num_drives_pt = len(data_pt)
-    # try:
-    #     ave_dist_pt = round(sum(data_pt['Drive Distance'].values)/num_drives_pt,2) 
-    # except ZeroDivisionError:
-    #     ave_dist_pt = '-'
-    
-    # col1, col2, col3, col4, _ = st.columns(5)
-    # with col1:
-    #     st.metric('Average Drive Distance', ave_dist_pt)
-    # with col2:
-    #     st.metric('Number of Shots', num_shots_pt)
-    # with col3:
-    #     st.metric('% of Possessions Ending in a Shot', perc_shots_pt)
-    # with col4:
-    #     st.metric('Points per possession*', ppp_pt)        
-    
-    
-    
-    # #Not getting into the paint
-    # try:
-    #     perc_shots_no_pt = num_shots_no_pt / num_possessions_no_pt
-    #     perc_shots_no_pt = str(round(perc_shots_no_pt*100,1)) + '%'
-    # except ZeroDivisionError:
-    #     perc_shots_no_pt = '-'
-        
-    # num_drives_no_pt = len(data_no_pt)
-    # try:
-    #     ave_dist_no_pt = round(sum(data_no_pt['Drive Distance'].values)/num_drives_no_pt,2) 
-    # except ZeroDivisionError:
-    #     ave_dist_no_pt = '-'
-    # col1, col2, col3, col4, _ = st.columns(5)
-    # with col1:
-    #     st.metric('Average Drive Distance', ave_dist_no_pt)
-    # with col2:
-    #     st.metric('Number of Shots', num_shots_no_pt)
-    # with col3:
-    #     st.metric('% of Possessions Ending in a Shot', perc_shots_no_pt)
-    # with col4:
-    #     st.metric('Points per possession*', ppp_no_pt)
-    
-
-    
-    #     st.metric('% of Possessions Ending in a Shot', perc_shots)
-    st.markdown("*When possessions that did not end in a transition shot are included, PPP will be uncharacteristically low as these possessions would be considered 0 points")
+    with col4:
+        st.metric('Number of Shots', num_shots)
+    with col5:
+        st.metric('% of Possessions Ending in a Shot', perc_shots)
+st.markdown("*When possessions that did not end in a transition shot are included, PPP will be uncharacteristically low as these possessions would be considered 0 points")
 
 
 def show_clusters(data):
@@ -376,18 +307,7 @@ def display3(data, original_data):
                             xaxis_title="Team",
                             yaxis_title="") 
             st.plotly_chart(fig)
-        
-        # with col2: # TOTAL NUMBER OF DEFENDERS PASSED
-        #     num_def_passed_per_game = [def_passed_sums_team[x]/num_games[x] for x in def_passed_sums_team.index]
-            
-        #     fig = px.bar(x = def_passed_sums_team.index, y = num_def_passed_per_game)
-        #     fig.update_layout(width=600, height=500,  
-        #                     title='# of Defenders Passed on Transition Drives Per Game', title_x=0.2,
-        #                     xaxis_title="Team",
-        #                     yaxis_title="") 
-        #     st.plotly_chart(fig)
 
-        #col1, col2, col3 = st.columns([25,60,15])
         
         with col2: #MEAN VS TOTAL
             num_drives_per_game = [num_drives_team[x]/num_games[x] for x in num_drives_team.index]
@@ -440,15 +360,6 @@ def display3(data, original_data):
         ppp_df_painttouch = get_ppp_team_df(data_painttouch)
         ppp_df_no_painttouch = get_ppp_team_df(data_no_painttouch)
 
-
-        #ppp_df_no_painttouch.columns = ['Player', 'PPP No Paint', 'Team']
-        #ppp_df_painttouch.columns = ['Player', 'PPP Paint', 'Team']
-        
-        # ppp_df_painttouch['Player']=ppp_df_painttouch['Player'].astype(str)
-        # ppp_df_no_painttouch['Player']=ppp_df_no_painttouch['Player'].astype(str)
-        # #ppp_df_painttouches = ppp_df_painttouch
-        #ppp_df_painttouch['PPP No Paint'] = ppp_df_no_painttouch['Points per Possession']
-        #ppp_df_no_painttouch.merge(ppp_df_painttouch, how='left', on='Player')
         ppp_df_painttouch = ppp_df_no_painttouch.merge(ppp_df_painttouch, on=['Team Name'], how='left')
         ppp_df_painttouch.columns = ['Team', 'PPP No Paint', 'PPP Paint']
         ppp_df_painttouch
