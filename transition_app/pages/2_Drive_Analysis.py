@@ -4,6 +4,7 @@ import streamlit as st
 import plotly.express as px
 import matplotlib.pyplot as plt
 import sys
+from sklearn.cluster import KMeans
  
 # adding Folder_2/subfolder to the system path
 sys.path.append('/Users/emmaritcey/Documents/basketball_research/wisd-hackathon')
@@ -12,6 +13,33 @@ from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp
 st.set_page_config(layout="wide")
 
 
+
+def cluster_data(data):
+    drive_start_x = [x[0] for x in data['Drive Start']]
+    drive_start_y = [x[1] for x in data['Drive Start']]
+
+    drive_end_x = [x[0] for x in data['Drive End']]
+    drive_end_y = [x[1] for x in data['Drive End']]
+
+    drive_dict = {'Drive Start X': drive_start_x, 'Drive Start Y': drive_start_y, 'Drive End X': drive_end_x, 'Drive End Y': drive_end_y}
+    df = pd.DataFrame(drive_dict)
+    
+    kmeans = KMeans(n_clusters=8, init='random', n_init='auto', random_state=1)
+    kmeans.fit(df)
+    init_clusters = kmeans.predict(df)
+    
+    cluster_dict = {0: 6, 1: 7, 2: 1, 3: 5, 4: 3, 5: 4, 6: 2, 7: 0}
+    drive_clusters = [cluster_dict[i] for i in init_clusters]
+    
+    cluster_names_dict =  {0:'Front Court, Right', 1:'Front Court, Left', 2:'3/4 Court, Right', 
+                           3:'3/4 Court Left', 4:'Back Court, Right', 5:'Back Court, Left', 
+                           6:'Full Court', 7:'Back Court, Short'}
+    cluster_names = [cluster_names_dict[i] for i in drive_clusters]
+    
+    data['Drive Clusters'] = drive_clusters
+    data['Drive Cluster Name'] = cluster_names
+    
+    return data
 
 def create_sidebar(df):
 
@@ -41,13 +69,14 @@ def display1(data, possessions_df, selections):
     st.markdown('- Drives that belong to possessions that ended in a :blue[**MISSED SHOT**] within the first 8 seconds of the shot clock are represented by :blue[**BLUE**] arrows')
     st.markdown('- Drives that belong to possessions that ended in **NO SHOT** within the first 8 seconds of the shot clock are represented by **WHITE** arrows')
     st.markdown("- Note that the arrows only depict the start and end location of a drive. Players actual track between these two locations would be much more variable.")
+    
     col1, col2 = st.columns([1,3])
     
     with col1: #WIDGETS/FILTERS
         
+        st.subheader('Displaying Drives for:')
         
-        st.markdown('##### Displaying Drives for:')
-        #team_selection, data = create_selectbox(data, 'Team Name', 'Team:', False)
+        drive_type, data = create_selectbox(data, 'Drive Cluster Name', 'Drive Type', False)
             
         col1_2, col2_2 = st.columns(2)
         with col1_2:
@@ -145,12 +174,11 @@ def display1(data, possessions_df, selections):
                 # Darker colors represent moments earlier on in the drive
                 
                 #cbar.ax.invert_xaxis()
-                #except:
-                                 
-                 
+                #except:                                   
         ax.set_xticks([])
         ax.set_yticks([])
         st.pyplot(fig2)  
+    
     return data
     
     
@@ -262,12 +290,62 @@ def display2(data):
     st.markdown("*When possessions that did not end in a transition shot are included, PPP will be uncharacteristically low as these possessions would be considered 0 points")
 
 
+def show_clusters(data):
+    
+    st.header('Drive Types')
+    st.markdown('K-means clustering was performed using k=8 to get 8 different types of drives based on their start and end location.')
+    show_drive_clusters = st.checkbox('Click to Show Drives by Cluster')
+    
+    if show_drive_clusters:
+        color_dict = {0: 'b', 1: 'r', 2: 'g', 3: 'm', 4: 'y', 5: 'c', 6: 'w', 7: 'tab:orange'}
+
+        titles = ['Front Court, Right', 'Front Court, Left', '3/4 Court, Right', '3/4 Court Left',
+               'Back Court, Right', 'Back Court, Left', 'Full Court', 'Back Court, Short']
+        plt.style.use('dark_background')
+        n_rows = 4
+        n_cols = 2
+        fig, axs = plt.subplots(n_rows, n_cols, figsize=(12, 16))
+        
+        total_num_drives = len(data)
+        perc_drives_dict = {}
+        ppp_dict = {}
+        cluster_num = 0
+        
+        
+        center_coord_x = 0
+        center_coord_y = 0
+        for row in range(0,n_rows):
+            for col in range(0,n_cols):
+                curr_data = data[data['Drive Clusters']==cluster_num]
+                perc_drives = round(len(curr_data)/total_num_drives*100,2)
+                perc_drives_dict[titles[cluster_num]] = perc_drives
+                ppp = get_ppp(curr_data)
+                ppp_dict[titles[cluster_num]] = ppp
+                axs[row, col] = make_fig(axs[row,col], cc_x=center_coord_x, cc_y=center_coord_y)
+                for idx in data.index.values:
+                    if data['Drive Clusters'].loc[idx]==cluster_num:
+                        #try:
+                        x = data['Drive Start'].loc[idx][0]
+                        y = data['Drive Start'].loc[idx][1]
+                        dx = data['Drive End'].loc[idx][0] - x
+                        dy = data['Drive End'].loc[idx][1] - y
+                        c = color_dict[data['Drive Clusters'].loc[idx]]
+                        axs[row,col].arrow(x,y,dx,dy, head_width=0.8, color=c)
+                    axs[row,col].set_xticks([])
+                    axs[row,col].set_yticks([])
+                axs[row,col].set_title(titles[cluster_num] + ', ' + str(perc_drives) + '%')
+                cluster_num += 1
+        st.pyplot(fig)
+            
+            
 
 def display3(data, original_data):
     '''
     TEAM BREAKDOWNS
     '''
     st.header('Team Breakdowns')
+    st.markdown('Select "All" to assess all types of drives')
+    cluster_selection, data = create_selectbox(data, 'Drive Cluster Name', 'Drive Type:', sidebar=False)
     
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -282,35 +360,39 @@ def display3(data, original_data):
     num_drives_team = data.groupby(['Team Name'])['# Defenders Passed'].count()
     num_games = get_num_games(data, 'Team Name')
     num_painttouches_team = data.groupby(['Team Name'])['Paint Touch'].sum()
-    perc_painttouches_team = data.groupby(['Team Name'])['Paint Touch'].mean() #percent of drives that end with a paint touch
+    #perc_painttouches_team = data.groupby(['Team Name'])['Paint Touch'].mean() #percent of drives that end with a paint touch
+
+    num_painttouches_drivetype = data.groupby(['Team Name', 'Drive Cluster Name'])['Paint Touch'].sum()
+    mean_num_painttouches_drivetype = [round(num_painttouches_drivetype[x][y]/num_games[x],2) for x,y in num_painttouches_drivetype.index] # # of paint touches per game
+            
 
     if button1: #DEFENDERS PASSED
         col1, col2 = st.columns(2)
         
         with col1: #MEAN DEFENDERS PASSED
             fig = px.bar(x = def_passed_means_team.index, y = def_passed_means_team.values)
-            fig.update_layout(width=600, height=500,  
+            fig.update_layout(width=550, height=500,  
                             title='Mean Defenders Passed Per Drive', title_x=0.25,
                             xaxis_title="Team",
                             yaxis_title="") 
             st.plotly_chart(fig)
         
-        with col2: # TOTAL NUMBER OF DEFENDERS PASSED
-            num_def_passed_per_game = [def_passed_sums_team[x]/num_games[x] for x in def_passed_sums_team.index]
+        # with col2: # TOTAL NUMBER OF DEFENDERS PASSED
+        #     num_def_passed_per_game = [def_passed_sums_team[x]/num_games[x] for x in def_passed_sums_team.index]
             
-            fig = px.bar(x = def_passed_sums_team.index, y = num_def_passed_per_game)
-            fig.update_layout(width=600, height=500,  
-                            title='# of Defenders Passed on Transition Drives Per Game', title_x=0.2,
-                            xaxis_title="Team",
-                            yaxis_title="") 
-            st.plotly_chart(fig)
+        #     fig = px.bar(x = def_passed_sums_team.index, y = num_def_passed_per_game)
+        #     fig.update_layout(width=600, height=500,  
+        #                     title='# of Defenders Passed on Transition Drives Per Game', title_x=0.2,
+        #                     xaxis_title="Team",
+        #                     yaxis_title="") 
+        #     st.plotly_chart(fig)
 
-        col1, col2, col3 = st.columns([25,60,15])
+        #col1, col2, col3 = st.columns([25,60,15])
         
         with col2: #MEAN VS TOTAL
             num_drives_per_game = [num_drives_team[x]/num_games[x] for x in num_drives_team.index]
             fig = px.scatter(x = num_drives_per_game, y = def_passed_means_team.values, text = def_passed_sums_team.index)
-            fig.update_layout(width=600, height=400,  
+            fig.update_layout(width=550, height=500,  
                             title='Mean Defenders Passed vs # of Drives Per Game', title_x=0.25,
                             xaxis_title="Numer of Transition Drives Per Game",
                             yaxis_title='Mean Defenders Passed') 
@@ -320,35 +402,33 @@ def display3(data, original_data):
             st.plotly_chart(fig)
             
     if button3:
+        mean_painttouches_team = [num_painttouches_team[x]/num_games[x] for x in num_painttouches_team.index]
+        
+        team_list = [x for x,_ in num_painttouches_drivetype.index]
+        drv_list = [y for _, y in num_painttouches_drivetype.index]
+        mean_num_painttouches_drivetype_df = pd.DataFrame({'Team': team_list, 'Drive Type': drv_list, '# Paint Touches Per Game': mean_num_painttouches_drivetype})
+        mean_num_painttouches_drivetype_df = mean_num_painttouches_drivetype_df[mean_num_painttouches_drivetype_df['Drive Type'].isin(['Front Court, Right', 'Front Court, Left', 'Full Court'])]
+        
         col1, col2 = st.columns(2)
         with col1:
-            mean_painttouches_team = [num_painttouches_team[x]/num_games[x] for x in num_painttouches_team.index]
-            fig = px.bar(x = num_painttouches_team.index, y = mean_painttouches_team)
-            fig.update_layout(width=600, height=500,  
+            fig = px.bar(mean_num_painttouches_drivetype_df, x = 'Team', y = '# Paint Touches Per Game', color = 'Drive Type')
+            fig.update_layout(width=550, height=500,  
                             title='Mean Number of Paint Touches Per Game', title_x=0.25,
                             xaxis_title="Team",
                             yaxis_title="") 
             st.plotly_chart(fig)
 
         with col2:
-            fig = px.bar(x = perc_painttouches_team.index, y = perc_painttouches_team)
-            fig.update_layout(width=600, height=500,  
-                            title='Percentage of Drives that End in a Paint Touch', title_x=0.25,
-                            xaxis_title="Team",
-                            yaxis_title="") 
-            st.plotly_chart(fig)
-        
-        
-        num_drives_per_game = [num_drives_team[x]/num_games[x] for x in num_drives_team.index]
-        fig = px.scatter(x = num_drives_per_game, y = mean_painttouches_team, text = num_drives_team.index)
-        fig.update_layout(width=600, height=400,  
-                        title='Mean Paint Touches Per game vs # of Drives Per Game', title_x=0.25,
-                        xaxis_title="Numer of Transition Drives Per Game",
-                        yaxis_title='Mean Paint Touches') 
-        fig.update_traces(marker=dict(size=10), textposition='top center')
-        fig.update_xaxes(range=[min(num_drives_per_game)-5, max(num_drives_per_game)+5])
-        fig.update_yaxes(range=[min(mean_painttouches_team)-0.5, max(mean_painttouches_team)+0.5])
-        st.plotly_chart(fig)
+            num_drives_per_game = [num_drives_team[x]/num_games[x] for x in num_drives_team.index]
+            fig2 = px.scatter(x = num_drives_per_game, y = mean_painttouches_team, text = num_drives_team.index)
+            fig2.update_layout(width=550, height=500,  
+                            title='Mean Paint Touches Per game vs # of Drives Per Game', title_x=0.25,
+                            xaxis_title="Numer of Transition Drives Per Game",
+                            yaxis_title='Mean Paint Touches') 
+            fig2.update_traces(marker=dict(size=10), textposition='top center')
+            fig2.update_xaxes(range=[min(num_drives_per_game)-5, max(num_drives_per_game)+5])
+            fig2.update_yaxes(range=[min(mean_painttouches_team)-0.5, max(mean_painttouches_team)+0.5])
+            st.plotly_chart(fig2)
         
     if button2:
         
@@ -371,7 +451,7 @@ def display3(data, original_data):
         #ppp_df_no_painttouch.merge(ppp_df_painttouch, how='left', on='Player')
         ppp_df_painttouch = ppp_df_no_painttouch.merge(ppp_df_painttouch, on=['Team Name'], how='left')
         ppp_df_painttouch.columns = ['Team', 'PPP No Paint', 'PPP Paint']
-     
+        ppp_df_painttouch
         fig = px.bar(data_frame=ppp_df_painttouch,
                     x="Team",
                     y=["PPP Paint", "PPP No Paint"],
@@ -412,6 +492,10 @@ def display4(data):
     ''' 
     st.header('Player Breakdowns') 
     
+    st.markdown('Select "All" to assess all types of drives')
+    cluster_selection, data = create_selectbox(data, 'Drive Cluster Name', 'Drive Type:', sidebar=False, key='player_clusters')
+    
+    
     num_games_dict = get_num_games(data, 'Driver') #dictionary containing number of games played for each player
     players = np.array(list(num_games_dict.keys())) #get list of players
     num_games = list(num_games_dict.values())
@@ -445,6 +529,13 @@ def display4(data):
     num_painttouches_per_game = [round(num_painttouches_player[x]/filtered_num_games_dict[x],2) for x in num_painttouches_player.index] # # of paint touches per game
     num_painttouches_per_game_df = pd.DataFrame({'Player':num_painttouches_player.index, '# Paint Touches Per Game': num_painttouches_per_game})
     
+    num_painttouches_drivetype_player = data.groupby(['Driver', 'Drive Cluster Name'])['Paint Touch'].sum()
+    num_painttouches_drivetype_per_game = [round(num_painttouches_drivetype_player[x][y]/filtered_num_games_dict[x],2) for x,y in num_painttouches_drivetype_player.index] # # of paint touches per game
+    plyr_list = [x for x,_ in num_painttouches_drivetype_player.index]
+    drv_list = [y for _, y in num_painttouches_drivetype_player.index]
+    num_painttouches_drivetype_per_game_df = pd.DataFrame({'Player': plyr_list, 'Drive Type': drv_list, '# Paint Touches Per Game': num_painttouches_drivetype_per_game})
+    num_painttouches_drivetype_per_game_df = num_painttouches_drivetype_per_game_df[num_painttouches_drivetype_per_game_df['Drive Type'].isin(['Front Court, Right', 'Front Court, Left', 'Full Court'])]
+    
     #MEAN DEFENDERS 
     col1, col2, col3, col4 = st.columns(4)
     with col1:
@@ -472,8 +563,7 @@ def display4(data):
         
         #TOTAL NUMBER OF DRIVES PER GAME VS MEAN DEFENDERS PASSED
         filtered_num_drives_player = data.groupby(['Driver'])['# Defenders Passed'].count() #total number of drives made in transition
-        st.write(len(filtered_num_drives_player))
-        st.write(len(num_games_dict))
+
         filtered_num_drives_per_game = [round(filtered_num_drives_player[x]/num_games_dict[x],2) for x in filtered_num_drives_player.index]
         fig2 = px.scatter(x = filtered_num_drives_per_game, y = def_passed_means_player.values, text = def_passed_means_player.index)
         fig2.update_layout(width=1200, height=700,  
@@ -505,16 +595,14 @@ def display4(data):
         st.plotly_chart(fig4)
         
     if button5: #Number of paint touches per game
-        zipped_pairs = zip(num_painttouches_per_game, def_passed_means_player.index)
-        sorted_mean_list = sorted(num_painttouches_per_game, reverse=True)
-        sorted_player_list = [x for _, x in sorted(zipped_pairs, reverse=True)]
-
-        #MEAN DEFENDERS PASSED PER DRIVE
-        fig = px.bar(x = sorted_player_list, y = sorted_mean_list)
+    
+         #NUM OF PAINT TOUCHES PER GAME
+        fig = px.bar(num_painttouches_drivetype_per_game_df, x = 'Player', y = '# Paint Touches Per Game', color='Drive Type')
         fig.update_layout(width=1200, height=500,  
                         title='Mean Number of Paint Touches Per Game', title_x=0.35,
                         xaxis_title="Player",
-                        yaxis_title="") #template='plotly_dark',
+                        yaxis_title="",
+                        xaxis={'categoryorder': 'total descending'}) #template='plotly_dark',
         st.plotly_chart(fig)
         
         #TOTAL NUMBER OF DRIVES PER GAME VS MEAN DEFENDERS PASSED
@@ -544,12 +632,10 @@ def display4(data):
                           legend_title=None) 
         st.plotly_chart(fig)
         
-        
         #POINTS PER POSSESSION WHEN THEY GET A PAINT TOUCH VS NOT
         #team_selection, data = create_selectbox(data, 'Team Name', 'Team:', False, 'team')
         data_painttouch = data[data['Paint Touch'] == True]
         data_no_painttouch = data[data['Paint Touch'] == False]
-
         
         ppp_df_painttouch = get_ppp_player_df(data_painttouch, 'Driver')
         ppp_df_no_painttouch = get_ppp_player_df(data_no_painttouch, 'Driver')
@@ -558,7 +644,7 @@ def display4(data):
         
         ppp_df_painttouch['Player']=ppp_df_painttouch['Player'].astype(str)
         ppp_df_no_painttouch['Player']=ppp_df_no_painttouch['Player'].astype(str)
-        ppp_df_painttouch = ppp_df_no_painttouch.merge(ppp_df_painttouch, on=['Player'], how='left')
+        ppp_df_painttouch = ppp_df_painttouch.merge(ppp_df_no_painttouch, on=['Player'], how='left')
         ppp_df_painttouch.columns = ['Player', 'PPP No Paint', 'Team', 'PPP Paint', 'Team x']
         
         fig = px.bar(data_frame=ppp_df_painttouch,
@@ -568,8 +654,22 @@ def display4(data):
         fig.update_layout(legend_title=None,
                         width = 1200)
         st.plotly_chart(fig)
-        
-            
+             
+        #NUMBER OF PAINT TOUCHES VS NUMBER OF DRIVES
+        filtered_num_drives_player = data.groupby(['Driver'])['# Defenders Passed'].count() #total number of drives made in transition
+        filtered_num_drives_per_game = [round(filtered_num_drives_player[x]/num_games_dict[x],2) for x in filtered_num_drives_player.index]
+        fig6 = px.scatter(x = filtered_num_drives_per_game, 
+                          y = num_painttouches_per_game, 
+                          text = filtered_num_drives_player.index,
+                          color=ppp_df['Team'],
+                          color_discrete_map=colors,
+                          size=ppp_df['Points per Possession'])
+        fig6.update_layout(width=1200, height=700,  
+                        title='Mean Number of Paint Touches vs Number of Drives', title_x=0.35,
+                        xaxis_title="# of Transition Drives Per Game", yaxis_title='Mean Number of Paint Touches') #template='plotly_dark',
+        fig6.update_traces(textposition='top center')
+        st.plotly_chart(fig6)
+               
         #MEAN PAINT TOUCHES VS MEAN DEFENDERS PASSED WITH PPP AS DOT SIZE
         filtered_num_drives_player = data.groupby(['Driver'])['# Defenders Passed'].count() #total number of drives made in transition
         filtered_num_drives_per_game = [round(filtered_num_drives_player[x]/num_games_dict[x],2) for x in filtered_num_drives_player.index]
@@ -636,12 +736,15 @@ def main():
     drive_df.loc[drive_df['Transition Trigger'] == 'TO', 'Transition Trigger'] = "Turnover"
     drive_df.loc[drive_df['Outcome'] == 'foul', 'Outcome'] = "non-shooting foul"
 
+    drive_df = cluster_data(drive_df)
     
     show_raw_data, drive_data, selections = create_sidebar(drive_df) 
     
     drive_data_selected_team = display1(drive_data, possessions_df, selections)
     
     display2(drive_data_selected_team)
+    
+    show_clusters(drive_data)
     
     st.markdown('#')
     display3(drive_data, drive_df)
