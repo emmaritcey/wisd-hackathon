@@ -47,6 +47,26 @@ def get_drive_indices(possession_df, end_idx, trigger_event):
     
     return drive_start_stops
         
+def get_ball_locations(possession_df, drive_idx, shooting_side):
+    ball_locs = possession_df['ball'].values
+    ball_locs_x = [x[0] for x in ball_locs[drive_idx[0]:drive_idx[1]]]
+    ball_locs_y = [x[1] for x in ball_locs[drive_idx[0]:drive_idx[1]]]
+    
+    #if shooting_side == 1:
+    #    ball_locs_x = np.array(ball_locs_x)*(-1)
+        #ball_locs_y = np.array(ball_locs_y)*(-1)
+    ball_locs_x = np.array(ball_locs_x)*shooting_side #flip court depending on direction
+    if shooting_side == 1: #flip y axis so left to right is negative progression and right to left is positive progression
+        ball_locs_y = np.array(ball_locs_y)*(-1)
+    
+    return ball_locs_x, ball_locs_y
+    
+def is_paint_touch(end_loc):
+    if (end_loc[0] > 28) and (end_loc[0] < 45) and (end_loc[1] > -8) and (end_loc[1] < 8):
+        return True
+    else:
+        return False
+
 
 def time_of_drive(possession_df, start_end_indices):
     '''
@@ -253,8 +273,12 @@ def get_possession_drives(possession_df, end_idx, shooting_side, team, event, dr
         dist_x, dist_y, distance, start_loc, end_loc = distance_dribbled_discrete(possession_df, drive_idx, shooting_side)
         total_dist_x, total_dist_y, total_distance = distance_dribbled_total(possession_df, drive_idx)
         ground_made_up, num_def_passed = num_defenders_overtaken(possession_df, drive_idx, shooting_side, team)
+        ball_loc_x, ball_loc_y = get_ball_locations(possession_df, drive_idx, shooting_side)
+        paint_touch = is_paint_touch(end_loc)
         playerName = get_driver(possession_df, drive_idx, team)
         drive_dict['Drive Indices'].append(drive_idx)
+        drive_dict['Ball Loc X'].append(ball_loc_x)
+        drive_dict['Ball Loc Y'].append(ball_loc_y)
         drive_dict['Drive Time'].append(time_to_drive)
         drive_dict['Drive Length (sec)'].append(length_of_drive_seconds)
         drive_dict['Drive Distance X'].append(dist_x)
@@ -262,6 +286,7 @@ def get_possession_drives(possession_df, end_idx, shooting_side, team, event, dr
         drive_dict['Drive Distance'].append(distance)
         drive_dict['Drive Start'].append(start_loc)
         drive_dict['Drive End'].append(end_loc)
+        drive_dict['Paint Touch'].append(paint_touch)
         drive_dict['Total Drive Distance X'].append(total_dist_x)
         drive_dict['Total Drive Distance Y'].append(total_dist_y)
         drive_dict['Total Drive Distance'].append(total_distance)
@@ -293,8 +318,8 @@ def get_drive_data(trans_possessions, end_indices, events_df, shooting_direction
     #ground made up --> ground the ball made up on each defender from the pass (if 2 feet behind defender and then 1 foot behind defender after pass, then it would be 1 for that defender)
     #defenders passed --> number of defenders the ball passed in the air
     #transition index --> the transition possession the pass occurred in (to be able to map it back to its tracking and event data)
-    drive_dict = {'Drive Indices': [], 'Drive Time': [], 'Drive Length (sec)': [], 'Drive Distance X': [], 'Drive Distance Y': [], 
-                  'Drive Distance': [], 'Drive Start': [], 'Drive End': [], 'Drive Distance': [], 'Total Drive Distance X': [], 
+    drive_dict = {'Drive Indices': [], 'Ball Loc X': [], 'Ball Loc Y': [], 'Drive Time': [], 'Drive Length (sec)': [], 'Drive Distance X': [], 'Drive Distance Y': [], 
+                  'Drive Distance': [], 'Drive Start': [], 'Drive End': [], 'Paint Touch': [], 'Drive Distance': [], 'Total Drive Distance X': [], 
                   'Total Drive Distance Y': [], 'Total Drive Distance': [], 'Ground Made Up': [], '# Defenders Passed': [], 
                   'Driver': [], 'Transition Index': []}
     

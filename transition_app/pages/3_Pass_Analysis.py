@@ -8,7 +8,7 @@ import sys
 # adding Folder_2/subfolder to the system path
 sys.path.append('/Users/emmaritcey/Documents/basketball_research/wisd-hackathon')
 from src.visualization.draw_court import make_fig
-from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_num_games_player, get_ppp_player_df, improve_text_position
+from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_ppp_player_df, improve_text_position
 st.set_page_config(layout="wide")
 
 
@@ -231,7 +231,7 @@ def display4(data):
     PLAYER BREAKDOWNS
     '''
     st.header('Player Breakdowns') 
-    num_games_dict = get_num_games_player(data, 'Passer')
+    num_games_dict = get_num_games(data, 'Passer')
     players = np.array(list(num_games_dict.keys())) #get list of players
     num_games = list(num_games_dict.values())
         

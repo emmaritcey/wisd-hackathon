@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import os
+import pickle
 from src.utils.pass_analysis import get_pass_data
 from src.utils.data_helpers import get_team_name, travel_dist, get_game_title
 from src.utils.drive_analysis import get_drive_data
@@ -178,7 +179,34 @@ def get_player_distance(player_locs, player_num):
     return dist, playerId
 
 
-def get_poss_summary(possession_df, end_idx, event, team, shooting_side):
+def get_player_locations(possession_df, end_idx, team):
+    
+    frame_num = 12 #to get approx 0.5 seconds into possessioin, use the 12th frame
+
+    if end_idx >= frame_num:
+        frame = possession_df.iloc[frame_num]
+        if team == 'home':
+            off_loc_str = 'homePlayersLoc'
+            def_loc_str = 'awayPlayersLoc'
+        else:
+            off_loc_str = 'awayPlayersLoc'
+            def_loc_str = 'homePlayersLoc'
+        
+        off_locs = frame[off_loc_str]
+
+        def_locs = frame[def_loc_str]
+        
+        ball_locs = frame['ball']
+    else:
+        off_locs = None
+        def_locs = None
+        ball_locs = None
+        
+    return off_locs, def_locs, ball_locs
+          
+        
+    
+def get_poss_summary(possession_df, end_idx, event, team, shooting_sides):
     '''
     Get summary of a single transition possession: 
         - length of possession in seconds
@@ -206,7 +234,16 @@ def get_poss_summary(possession_df, end_idx, event, team, shooting_side):
     #get number of drives
     num_drives = count_drives(possession_df, end_idx, event)
     #get time taken for ball to cross half
-    time_to_half = time_ball_crossed_half(possession_df, end_idx, shooting_side)
+    time_to_half = time_ball_crossed_half(possession_df, end_idx, shooting_sides)
+    #get offensive and defensive locations 0.5 seconds into transition possession
+    period = possession_df['PERIOD'].iloc[0]
+    if period <= 2:
+        shooting_side = shooting_sides[0]
+    else:
+        shooting_side = shooting_sides[1]
+    off_start_locs, def_start_locs, ball_start_loc = get_player_locations(possession_df, end_idx, team)
+    
+    
     
     #get the total distance travelled by the ball and its average speed
     
@@ -239,8 +276,9 @@ def get_poss_summary(possession_df, end_idx, event, team, shooting_side):
     outcome_eventmsg = event['OUTCOME MSGTYPE']
     outcome_eventmsgaction = event['OUTCOME MSGACTIONTYPE']
     #'Pass Lengths': pass_lengths, 
-    summary_dict = {'Possession Length': poss_length, 'Time Ball Crosses Half': time_to_half, '# Dribbles': num_dribbles, '# Drives': num_drives, 
-                    '# Passes': num_passes, 'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 'Off Player Distances': off_distances, 
+    summary_dict = {'Period': period, 'Shooting Side': shooting_side, 'Possession Length': poss_length, 'Time Ball Crosses Half': time_to_half, '# Dribbles': num_dribbles, 
+                    '# Drives': num_drives, '# Passes': num_passes, 'Ball Distance': ball_dist, 'Average Ball Speed': avg_speed_ball, 
+                    'Off Start Locs': off_start_locs, 'Def Start Locs': def_start_locs, 'Ball Start Loc': ball_start_loc, 'Off Player Distances': off_distances, 
                     'Off Player Speeds': off_speeds, 'Def Player Distances': def_distances, 'Def Player Speeds': def_speeds,
                     'Trigger': trigger, 'Outcome': outcome, 'OutcomeMSG': outcome_eventmsg, 'OutcomeMSGaction': outcome_eventmsgaction}
     
@@ -325,12 +363,16 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
     if team == 'home':
         shooting_directions = trans_object.meta_data['homeDirection']
         teamId = trans_object.meta_data['homeTeamId']
+        points_scored = trans_object.meta_data['homeScore']
+        game_won = trans_object.meta_data['homeWin']
         #teamName = trans_object.meta_data['homeTeamName']
         #teamId = get_team_id(teamName)
     else:
         shooting_directions = trans_object.meta_data['awayDirection']
  
         teamId = trans_object.meta_data['awayTeamId']
+        points_scored = trans_object.meta_data['awayScore']
+        game_won = trans_object.meta_data['awayWin']
         #teamName = trans_object.meta_data['awayTeamName']
         #teamId = get_team_id(teamName)
     gameId = trans_object.meta_data['id']
@@ -372,18 +414,24 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
     trans_summaries_df['Game Id'] = gameId
     trans_summaries_df['Game Title'] = game_title
     trans_summaries_df['Series'] = series
+    trans_summaries_df['Points Scored'] = points_scored
+    trans_summaries_df['Win'] = game_won
     pass_df['Team Id'] = teamId
     pass_df['Team Name'] = get_team_name(teamId)
     pass_df['NBA Game Id'] = nba_gameId
     pass_df['Game Id'] = gameId
     pass_df['Game Title'] = game_title
     pass_df['Series'] = series
+    pass_df['Points Scored'] = points_scored
+    pass_df['Win'] = game_won
     drive_df['Team Id'] = teamId
     drive_df['Team Name'] = get_team_name(teamId)
     drive_df['NBA Game Id'] = nba_gameId
     drive_df['Game Id'] = gameId
     drive_df['Game Title'] = game_title
     drive_df['Series'] = series
+    drive_df['Points Scored'] = points_scored
+    drive_df['Win'] = game_won
     
     
     return trans_summaries_df, pass_df, drive_df, trans_idx
@@ -392,7 +440,7 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
 def get_all_games_data():
     
     #save the data
-    save_loc = 'data/transition/'
+    save_loc = 'data/transition_test/'
     if os.path.isdir(save_loc) == False:
         os.mkdir(save_loc)
     if os.path.isdir(save_loc+'possessions_tracking_data/') == False:
@@ -412,6 +460,10 @@ def get_all_games_data():
         print(gameId)
         for team in ['home', 'away']:
             transition = Transition(gameId, team)
+            if team == 'home':
+                teamName = transition.meta_data['homeTeamName']
+            else:
+                teamName = transition.meta_data['awayTeamName']
             possession_summaries, pass_stats, drive_stats, trans_idx = get_single_game_data(transition, team, trans_idx)
             #transition_objects.append(transition)
             #gameId_list.append(gameId)
@@ -421,20 +473,13 @@ def get_all_games_data():
             all_pass_stats = pd.concat([all_pass_stats, pass_stats], ignore_index=True)
             all_drive_stats = pd.concat([all_drive_stats, drive_stats], ignore_index=True)
             
-            transition_possessions = {'Transition Object': [transition], 'Game Id': [gameId], 'Team': [team]}
-            transition_possessions = pd.DataFrame(transition_possessions)
-            transition_possessions.to_pickle(save_loc+'possessions_tracking_data/'+gameId+'_'+team+'.pkl')
-  
+            # with open(save_loc+'possessions_tracking_data/'+gameId+'_'+teamName+'.pkl', 'wb') as file:
+            #     pickle.dump(transition, file)
 
-    #transition_possessions = {'Transition Object': transition_objects, 'Game Id': gameId_list, 'Team': team_list}
-    #transition_possessions = pd.DataFrame(transition_possessions)
-    
-
-    #save the data
-    all_pass_stats.to_pickle(save_loc+'/pass_stats.pkl')
-    all_drive_stats.to_pickle(save_loc+'/drive_stats.pkl')
+    # #save the data
+    # all_pass_stats.to_pickle(save_loc+'/pass_stats.pkl')
+    # all_drive_stats.to_pickle(save_loc+'/drive_stats.pkl')
     all_poss_summaries.to_pickle(save_loc+'/possession_summaries.pkl')
-    #transition_possessions.to_pickle(save_loc+'/transition_possession.pkl')
 
     
 def main():

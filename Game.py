@@ -57,9 +57,71 @@ class Game:
         
         if game_id[0:-1] == '004210030':
             game_md['series'] = 'ECF'
+            if game_id == '0042100301':
+                game_md['homeScore'] = 118
+                game_md['awayScore'] = 107
+            elif game_id == '0042100302':
+                game_md['homeScore'] = 102
+                game_md['awayScore'] = 127
+            elif game_id == '0042100303':
+                game_md['homeScore'] = 103
+                game_md['awayScore'] = 109
+            elif game_id == '0042100304':
+                game_md['homeScore'] = 102
+                game_md['awayScore'] = 82
+            elif game_id == '0042100305':
+                game_md['homeScore'] = 80
+                game_md['awayScore'] = 93
+            elif game_id == '0042100306':
+                game_md['homeScore'] = 103
+                game_md['awayScore'] = 111
+            elif game_id == '0042100307':
+                game_md['homeScore'] = 96
+                game_md['awayScore'] = 100
+                
         elif game_id[0:-1] == '004210031':
             game_md['series'] = 'WCF'
+            if game_id == '0042100311':
+                game_md['homeScore'] = 112
+                game_md['awayScore'] = 87
+            elif game_id == '0042100312':
+                game_md['homeScore'] = 126
+                game_md['awayScore'] = 112
+            elif game_id == '0042100313':
+                game_md['homeScore'] = 100
+                game_md['awayScore'] = 109
+            elif game_id == '0042100314':
+                game_md['homeScore'] = 119
+                game_md['awayScore'] = 109
+            elif game_id == '0042100315':
+                game_md['homeScore'] = 120
+                game_md['awayScore'] = 110
         else:
             game_md['series'] = 'Finals'
-
-        return game_md
+            if game_id == '0042100401':
+                game_md['homeScore'] = 108
+                game_md['awayScore'] = 120
+            elif game_id == '0042100402':
+                game_md['homeScore'] = 107
+                game_md['awayScore'] = 88
+            elif game_id == '0042100403':
+                game_md['homeScore'] = 116
+                game_md['awayScore'] = 100
+            elif game_id == '0042100404':
+                game_md['homeScore'] = 97
+                game_md['awayScore'] = 107
+            elif game_id == '0042100405':
+                game_md['homeScore'] = 104
+                game_md['awayScore'] = 94
+            elif game_id == '0042100406':
+                game_md['homeScore'] = 90
+                game_md['awayScore'] = 103
+                
+        if game_md['homeScore'] > game_md['awayScore']:
+            game_md['homeWin'] = True
+            game_md['awayWin'] = False
+        else:
+            game_md['homeWin'] = False
+            game_md['awayWin'] = True
+            
+        return game_md 
