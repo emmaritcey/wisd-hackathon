@@ -218,7 +218,7 @@ def display2(data):
         st.metric('Number of Shots', num_shots)
     with col5:
         st.metric('% of Possessions Ending in a Shot', perc_shots)
-st.markdown("*When possessions that did not end in a transition shot are included, PPP will be uncharacteristically low as these possessions would be considered 0 points")
+    st.markdown("*When possessions that did not end in a transition shot are included, PPP will be uncharacteristically low as these possessions would be considered 0 points")
 
 
 def show_clusters(data):
