@@ -9,7 +9,7 @@ from sklearn.cluster import KMeans
 # adding Folder_2/subfolder to the system path
 sys.path.append('/Users/emmaritcey/Documents/basketball_research/wisd-hackathon')
 from src.visualization.draw_court import make_fig
-from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_ppp_player_df, improve_text_position
+from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_ppp_player_df, improve_text_position, get_value
 st.set_page_config(layout="wide")
 
 
@@ -104,7 +104,7 @@ def display1(data, possessions_df, selections):
         
         st.markdown('Series: ' + selections['Series'])
         st.markdown('Game: ' + selections['Game'])
-        st.markdown('Team:' + selections['Team'])
+        st.markdown('Team: ' + selections['Team'])
         st.markdown('Player: ' + selections['Passer'])
         st.markdown('Transition initiated by: ' + selections['Trigger'])
         st.markdown('Outcome: ' + selections['Outcome'])
@@ -271,13 +271,14 @@ def display3(data, original_data):
                             xaxis_title="Numer of Transition Passes Per Game",
                             yaxis_title='Mean Defenders Passed') #template='plotly_dark',
             fig.update_traces(marker=dict(size=10), textposition='top center')
-            fig.update_xaxes(range=[min(num_passes_per_game)-5, max(num_passes_per_game)+5])
-            fig.update_yaxes(range=[min(def_passed_means_team)-0.02, max(def_passed_means_team)+0.03])
+            fig.update_xaxes(range=[max(min(num_passes_per_game)-5,0), max(num_passes_per_game)+5])
+            fig.update_yaxes(range=[min(def_passed_means_team)-0.02, max(def_passed_means_team)+0.1])
             st.plotly_chart(fig)
         
     if button2: #POINTS PER POSSESSION
         #colors = {'Boston Celtics': 'green', 'Dallas Mavericks': 'blue', 'Golden State Warriors': 'gold', 'Miami Heat': 'red'}
         #color_to_plot = [colors[c] for c in colors if c in ppp_df.columns]
+        
         ppp_pass_types = data.groupby(['Team Name', 'Pass Cluster Name']).apply(get_ppp)
         
         team_list = [x for x,_ in ppp_pass_types.index]
@@ -288,7 +289,7 @@ def display3(data, original_data):
         fig = px.bar(ppp_passtype_df, x='Team', y='Points per Possession', color='Pass Type', barmode='group')
         fig.update_layout(width=1100, height=400,  
                         yaxis_title='Points Per Possession',
-                        xaxis_title="# of Defenders Passed", legend_title=None) #template='plotly_dark',
+                        xaxis_title="Team", legend_title=None) #template='plotly_dark',
         st.plotly_chart(fig)
         
         
@@ -315,7 +316,6 @@ def display3(data, original_data):
                             yaxis_title='Points Per Possession', 
                             xaxis_title="Minimum Pass Distance", legend_title=None) 
             st.plotly_chart(fig2)
-        
 
     
 def display4(data):
@@ -324,98 +324,120 @@ def display4(data):
     '''
     st.header('Player Breakdowns') 
     
-    st.markdown('Select "All" to assess all types of passes')
-    cluster_selection, data = create_selectbox(data, 'Pass Cluster Name', 'Pass Type:', sidebar=False, key='pass_type2')
-    
     num_games_dict = get_num_games(data, 'Passer')
     players = np.array(list(num_games_dict.keys())) #get list of players
     num_games = list(num_games_dict.values())
-        
-    num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
-    num_passes_per_game = [round(num_passes_player[x]/num_games_dict[x],2) for x in num_passes_player.index]
-    num_passes_per_game_df = pd.DataFrame({'Player':num_passes_player.index, '# Passes Per Game': num_passes_per_game})
     
-    #Sliders
-    #minimum pass distance:
-    min_pass_dist = st.slider('Select Minimum Pass Distance')
-    data = data[data['Pass Distance'] >= min_pass_dist]
-    #minimum number of passes per game:
-    min_num_passes = st.slider('Select Minimum Number of Transition Passes Per Game for a Single Player', min_value=0, max_value=int(max(np.round(num_passes_per_game_df['# Passes Per Game'].values))))
-    num_passes_per_game_df = num_passes_per_game_df[num_passes_per_game_df['# Passes Per Game'] >= min_num_passes]
-    data = data[data['Passer'].isin(num_passes_per_game_df['Player'].values)]
-    #minimum number of games played:
-    if max(num_games) > 1:
-        min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
-        min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
-        eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
-        data = data[data['Passer'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
-
-    def_passed_means_player = data.groupby(['Passer'])['# Defenders Passed'].mean() #number of defenders passed per pass in transition on average
-
-    #MEAN DEFENDERS 
-    col1, col2 = st.columns(2)
-    with col1:
-        button3 = st.button('Show Defenders Passed Visualizations', key='pass_3')
-    with col2:
-        button4 = st.button('Show Points per Possession', key='pass_4')
-
-    if button3: #DEFENDERS PASSED
-        zipped_pairs = zip(def_passed_means_player.values, def_passed_means_player.index)
-        sorted_mean_list = sorted(def_passed_means_player.values, reverse=True)
-        sorted_player_list = [x for _, x in sorted(zipped_pairs, reverse=True)]
-
-        #MEAN DEFENDERS PASSED PER PASS
-        fig = px.bar(x = sorted_player_list, y = sorted_mean_list)
-        fig.update_layout(width=1200, height=500,  
-                        title='Mean Defenders Passed On a Transition Pass', title_x=0.4,
-                        xaxis_title="Player",
-                        yaxis_title="") 
-        st.plotly_chart(fig)
-        
-
-        #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
-        filtered_num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
-        filtered_num_passes_per_game = [round(filtered_num_passes_player[x]/num_games_dict[x],2) for x in filtered_num_passes_player.index]
-        fig2 = px.scatter(x = filtered_num_passes_per_game, y = def_passed_means_player.values, text = def_passed_means_player.index)
-        fig2.update_layout(width=1200, height=700,  
-                        title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
-                        xaxis_title="# of Transition Passes Per Game", yaxis_title='Mean Defenders Passed') 
-        fig2.update_traces(textposition=improve_text_position(def_passed_means_player.index), marker=dict(size=8))
-        st.plotly_chart(fig2)
-    
-    if button4: #POINTS PER POSSESSION
-        st.markdown('#')
-        st.markdown('The chart below shows the teams points per possession when a certain player passes the ball at least once in a transition possession. Use the filters above and on the sidebar to include desired pool of players and play types.')
-        
-        ppp_df = get_ppp_player_df(data, 'Passer')
-        ppp_df_sorted = ppp_df.sort_values('Points per Possession', ascending=False).reset_index()
-        
-        colors = {'Boston Celtics': 'green', 'Dallas Mavericks': 'blue', 'Golden State Warriors': 'gold', 'Miami Heat': 'red'}
-        fig = px.bar(ppp_df_sorted, x=ppp_df_sorted.index, y='Points per Possession', color='Team', color_discrete_map=colors)
-        fig.update_layout(width=1200, height=500,  
-                        xaxis_title="Player", 
-                        xaxis = dict(tickmode='array', tickvals = ppp_df_sorted.index, ticktext = ppp_df_sorted['Player']),
-                        yaxis_title="Points Per Possession", 
-                        legend_title=None) 
-        st.plotly_chart(fig)
-        
-        #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
-        filtered_num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
-        filtered_num_passes_per_game = [round(filtered_num_passes_player[x]/num_games_dict[x],2) for x in filtered_num_passes_player.index]
-        fig2 = px.scatter(x = filtered_num_passes_per_game, 
-                          y = def_passed_means_player.values, 
-                          text = def_passed_means_player.index, 
-                          color=ppp_df['Team'], 
-                          color_discrete_map=colors, 
-                          size=ppp_df['Points per Possession'])
-        fig2.update_layout(width=1200, height=700,  
-                        title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
-                        xaxis_title="# of Transition Passes Per Game", yaxis_title='Mean Defenders Passed')
-        fig2.update_traces(textposition=improve_text_position(def_passed_means_player.index))
-        st.plotly_chart(fig2)
-        
-        st.markdown("**Size of the marker represents the points per possession produced by the player's passes")
+    st.markdown('Select "All" to assess all types of passes')
+   # cluster_selection, data = create_selectbox(data, 'Pass Cluster Name', 'Pass Type:', sidebar=False, key='pass_type2')
    
+    cluster_selection = st.multiselect('Pass Type:', np.append(['All'], sorted(data['Pass Cluster Name'].unique())))
+    
+    if len(cluster_selection) != 0: 
+        if cluster_selection[0] != 'All':
+            data = data[data['Pass Cluster Name'].isin(cluster_selection)]
+        else:
+            data = data
+    
+        num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
+        num_passes_per_game = [round(num_passes_player[x]/num_games_dict[x],2) for x in num_passes_player.index]
+        num_passes_per_game_df = pd.DataFrame({'Player':num_passes_player.index, '# Passes Per Game': num_passes_per_game})
+        
+        #Sliders
+        #minimum number of passes per game:
+        min_num_passes = st.slider('Select Minimum Number of Transition Passes Per Game for a Single Player', min_value=0, max_value=int(max(np.round(num_passes_per_game_df['# Passes Per Game'].values))))
+        num_passes_per_game_df = num_passes_per_game_df[num_passes_per_game_df['# Passes Per Game'] >= min_num_passes]
+        data = data[data['Passer'].isin(num_passes_per_game_df['Player'].values)]
+        #minimum number of games played:
+        if max(num_games) > 1:
+            min_num_games = st.slider('Minimum Number of Games Played', min_value=1, max_value=max(num_games))
+            min_games_indices = np.where(np.array(num_games)>=min_num_games) #get indices of players who played in min_num_games
+            eligible_players = players[min_games_indices] #get player names of those who played in min_num_games
+            data = data[data['Passer'].isin(eligible_players)] #keep the data only for the players who played in min_num_games
+
+        def_passed_means_player = data.groupby(['Passer'])['# Defenders Passed'].mean() #number of defenders passed per pass in transition on average
+
+        #MEAN DEFENDERS 
+        col1, col2 = st.columns(2)
+        with col1:
+            button3 = st.button('Show Defenders Passed Visualizations', key='pass_3')
+        with col2:
+            button4 = st.button('Show Points per Possession', key='pass_4')
+            
+        colors = {'Boston Celtics': 'green', 'Dallas Mavericks': 'blue', 'Golden State Warriors': 'gold', 'Miami Heat': 'red'}
+        filtered_num_passes_player = data.groupby(['Passer'])['# Defenders Passed'].count() #total number of drives made in transition
+        filtered_num_passes_per_game = [round(filtered_num_passes_player[x]/num_games_dict[x],2) for x in filtered_num_passes_player.index]
+        
+        if button3: #DEFENDERS PASSED
+            team_list = data.groupby(['Passer']).agg({'Team Name': get_value})
+            
+            #MEAN DEFENDERS PASSED PER PASS
+            #fig = px.bar(x = sorted_player_list, y = sorted_mean_list, color=sorted_team_list, color_discrete_map=colors)
+            fig = px.bar(x = def_passed_means_player.index, y = def_passed_means_player.values, color=team_list['Team Name'], color_discrete_map=colors)
+            fig.update_layout(width=1200, height=500,  
+                            title='Mean Defenders Passed On a Transition Pass', title_x=0.4,
+                            xaxis_title="Player",
+                            yaxis_title="",
+                            xaxis={'categoryorder':'total descending'},
+                            legend_title=None) 
+            st.plotly_chart(fig)
+
+            #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
+            fig2 = px.scatter(x = filtered_num_passes_per_game, 
+                            y = def_passed_means_player.values, 
+                            text = def_passed_means_player.index,
+                            color = team_list['Team Name'],
+                            color_discrete_map=colors
+                            )
+            fig2.update_layout(width=1200, height=700,  
+                            title='Mean Defenders Passed on the Pass vs Number of Passes', 
+                            title_x=0.35,
+                            xaxis_title="# of Transition Passes Per Game", 
+                            yaxis_title='Mean Defenders Passed',
+                            legend_title=None) 
+            fig2.update_traces(textposition=improve_text_position(def_passed_means_player.index), marker=dict(size=8))
+            st.plotly_chart(fig2)
+        
+        if button4: #POINTS PER POSSESSION
+            st.markdown('#')
+            st.markdown('The chart below shows the teams points per possession when a certain player passes the ball at least once in a transition possession. Use the filters above and on the sidebar to include desired pool of players and play types.')
+            
+            ppp_df = get_ppp_player_df(data, 'Passer')
+            ppp_df_sorted = ppp_df.sort_values('Points per Possession', ascending=False).reset_index()
+            
+            
+            fig = px.bar(ppp_df_sorted, x=ppp_df_sorted.index, y='Points per Possession', color='Team', color_discrete_map=colors)
+            fig.update_layout(width=1200, height=500,  
+                            xaxis_title="Player", 
+                            xaxis = dict(tickmode='array', tickvals = ppp_df_sorted.index, ticktext = ppp_df_sorted['Player']),
+                            yaxis_title="Points Per Possession", 
+                            legend_title=None) 
+            st.plotly_chart(fig)
+            
+            #TOTAL NUMBER OF PASSES PER GAME VS MEAN DEFENDERS PASSED
+
+            fig2 = px.scatter(x = filtered_num_passes_per_game, 
+                            y = def_passed_means_player.values, 
+                            text = def_passed_means_player.index, 
+                            color=ppp_df['Team'], 
+                            color_discrete_map=colors, 
+                            size=ppp_df['Points per Possession'])
+            fig2.update_layout(width=1200, height=700,  
+                            title='Mean Defenders Passed on the Pass vs Number of Passes', title_x=0.35,
+                            xaxis_title="# of Transition Passes Per Game", yaxis_title='Mean Defenders Passed')
+            fig2.update_traces(textposition=improve_text_position(def_passed_means_player.index))
+            st.plotly_chart(fig2)
+            
+            st.markdown("**Size of the marker represents the points per possession produced by the player's passes")
+    
+        st.write('#')
+        st.write('#')
+        st.write('#')
+        st.write('#')
+        st.write('#')
+        st.write('#')
+        st.write('#')
+        st.write('#')
 
 def main():
     st.title('NBA Transition Tendencies: Passing')

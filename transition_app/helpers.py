@@ -114,14 +114,19 @@ def add_num_games(df, num_games):
     
     return df
 
+def get_value(x):
+    return x.iloc[0]
 
 def get_ppp(df):
     #assume each free throw opportunity ended in 1.5 points (75% free throw average estimate)
     made_shots = df[df['OutcomeMSG'] == 1]
-    points3 = len(made_shots[made_shots['OutcomeMSGaction'].isin([1,79])])*3 
-    points2 = len(made_shots[~made_shots['OutcomeMSGaction'].isin([1,79])])*2
+    made_shots_unique = made_shots.groupby(['Transition Index']).agg({'OutcomeMSGaction': get_value})
+
+    points3 = len(made_shots_unique[made_shots_unique['OutcomeMSGaction'].isin([1,79])])*3 
+    points2 = len(made_shots_unique[~made_shots_unique['OutcomeMSGaction'].isin([1,79])])*2
     freethrows = len(df[df['OutcomeMSG']==6])*1.5
     num_possessions = len(np.unique(df['Transition Index'].values))
+
     try:
         ppp = round((points3 + points2 + freethrows) / num_possessions, 2) #len(df),2)
     except ZeroDivisionError:

@@ -9,8 +9,7 @@ from plotly.subplots import make_subplots
  
 # adding Folder_2/subfolder to the system path
 sys.path.append('/Users/emmaritcey/Documents/basketball_research/wisd-hackathon')
-from src.visualization.draw_court import make_fig
-from helpers import load_data, create_selectbox, get_num_games, get_ppp, get_ppp_df, get_num_games_player, get_ppp_player_df, improve_text_position
+from helpers import load_data
 st.set_page_config(layout="wide")
 
 

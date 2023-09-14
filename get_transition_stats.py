@@ -440,13 +440,11 @@ def get_single_game_data(trans_object, team, trans_idx, first_x_seconds = 8, all
 def get_all_games_data():
     
     #save the data
-    save_loc = 'data/transition_test/'
+    save_loc = 'data/transition/'
     if os.path.isdir(save_loc) == False:
         os.mkdir(save_loc)
     if os.path.isdir(save_loc+'possessions_tracking_data/') == False:
         os.mkdir(save_loc+'possessions_tracking_data/')
-    
-    
     
     #transition_objects = []
     #gameId_list = []
@@ -473,12 +471,12 @@ def get_all_games_data():
             all_pass_stats = pd.concat([all_pass_stats, pass_stats], ignore_index=True)
             all_drive_stats = pd.concat([all_drive_stats, drive_stats], ignore_index=True)
             
-            # with open(save_loc+'possessions_tracking_data/'+gameId+'_'+teamName+'.pkl', 'wb') as file:
-            #     pickle.dump(transition, file)
+            with open(save_loc+'possessions_tracking_data/'+gameId+'_'+teamName+'.pkl', 'wb') as file:
+                pickle.dump(transition, file)
 
     # #save the data
-    # all_pass_stats.to_pickle(save_loc+'/pass_stats.pkl')
-    # all_drive_stats.to_pickle(save_loc+'/drive_stats.pkl')
+    all_pass_stats.to_pickle(save_loc+'/pass_stats.pkl')
+    all_drive_stats.to_pickle(save_loc+'/drive_stats.pkl')
     all_poss_summaries.to_pickle(save_loc+'/possession_summaries.pkl')
 
     
